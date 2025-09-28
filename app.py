@@ -18,6 +18,7 @@ from utils.data_loader import DataLoader
 from utils.geospatial import GeospatialProcessor
 from utils.risk_assessment import RiskAssessment
 from utils.visualization import Visualizer
+from utils.database import DatabaseManager
 
 # Page configuration
 st.set_page_config(
@@ -42,9 +43,14 @@ def initialize_components():
     geospatial = GeospatialProcessor()
     risk_assessment = RiskAssessment()
     visualizer = Visualizer()
-    return data_loader, geospatial, risk_assessment, visualizer
+    try:
+        db_manager = DatabaseManager()
+    except Exception as e:
+        st.warning(f"Database connection failed: {str(e)}. Some features may be limited.")
+        db_manager = None
+    return data_loader, geospatial, risk_assessment, visualizer, db_manager
 
-data_loader, geospatial, risk_assessment, visualizer = initialize_components()
+data_loader, geospatial, risk_assessment, visualizer, db_manager = initialize_components()
 
 # Main title and description
 st.title("🔥 Vegetation Detection Near Power Lines")
@@ -241,6 +247,36 @@ if st.session_state.data_loaded:
                         parameters=st.session_state.analysis_params
                     )
                     
+                    # Save to database if available
+                    if db_manager:
+                        try:
+                            session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{lat}_{lon}"
+                            
+                            session_data = {
+                                'session_id': session_id,
+                                'center_lat': lat,
+                                'center_lon': lon,
+                                'radius_km': radius_km,
+                                'parameters': st.session_state.analysis_params,
+                                'overall_risk_score': analysis_results.get('overall_risk', 0),
+                                'high_risk_count': analysis_results.get('high_risk_count', 0),
+                                'vegetation_density': analysis_results.get('vegetation_density', 0),
+                                'avg_clearance_distance': analysis_results.get('avg_clearance', 0),
+                                'data_sources': analysis_results.get('data_sources', {}),
+                                'priority_areas': analysis_results.get('priority_areas', [])
+                            }
+                            
+                            db_manager.save_analysis_session(session_data)
+                            
+                            # Save power line segments if available
+                            if hasattr(st.session_state, 'segmented_powerlines'):
+                                db_manager.save_powerline_segments(session_id, st.session_state.segmented_powerlines)
+                            
+                            st.session_state.current_session_id = session_id
+                            
+                        except Exception as db_error:
+                            st.warning(f"Analysis completed but database save failed: {str(db_error)}")
+                    
                     st.session_state.analysis_results = analysis_results
                     st.session_state.analysis_complete = True
                     st.success("✅ Analysis complete!")
@@ -411,6 +447,66 @@ if st.session_state.data_loaded:
     
     with tab5:
         st.subheader("Analysis Reports")
+        
+        # Historical Analysis Section
+        if db_manager:
+            st.subheader("📈 Historical Trends")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                trend_days = st.selectbox("Analysis Period", [7, 14, 30, 60, 90], index=2)
+            with col2:
+                trend_radius = st.slider("Search Radius (km)", 1, 50, 20)
+            
+            if st.button("🔍 Load Historical Trends"):
+                with st.spinner("Loading historical data..."):
+                    try:
+                        historical_data = db_manager.get_historical_analysis(
+                            lat, lon, trend_radius, trend_days
+                        )
+                        
+                        if not historical_data.empty:
+                            # Create trend visualization
+                            trend_fig = visualizer.create_trend_analysis(historical_data)
+                            st.plotly_chart(trend_fig, use_container_width=True)
+                            
+                            # Show data table
+                            st.subheader("Historical Data")
+                            st.dataframe(historical_data, use_container_width=True)
+                            
+                        else:
+                            st.info("No historical data found for this location and time period.")
+                            
+                    except Exception as e:
+                        st.error(f"Error loading historical trends: {str(e)}")
+            
+            # Risk Areas Overview
+            st.subheader("🚨 Regional Risk Overview")
+            if st.button("🗺️ Load Regional Risk Areas"):
+                with st.spinner("Loading regional risk data..."):
+                    try:
+                        risk_areas_df = db_manager.get_risk_areas_in_region(
+                            lat, lon, radius_km, min_risk_score=0.6
+                        )
+                        
+                        if not risk_areas_df.empty:
+                            st.metric("High Risk Areas Found", len(risk_areas_df))
+                            
+                            # Show risk areas on map
+                            risk_map = visualizer.create_risk_heatmap(risk_areas_df)
+                            st.plotly_chart(risk_map, use_container_width=True)
+                            
+                            # Show table of recent high-risk areas
+                            st.dataframe(
+                                risk_areas_df[['lat', 'lon', 'risk_score', 'risk_category', 
+                                             'clearance_distance', 'analysis_date']].head(20),
+                                use_container_width=True
+                            )
+                        else:
+                            st.success("No high-risk areas found in this region.")
+                            
+                    except Exception as e:
+                        st.error(f"Error loading regional risk data: {str(e)}")
         
         if st.session_state.analysis_complete:
             # Report generation

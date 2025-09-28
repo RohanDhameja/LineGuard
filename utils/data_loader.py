@@ -28,34 +28,73 @@ class DataLoader:
         try:
             import ee
             
-            # Try to initialize with service account if available
+            # Try multiple initialization methods
             service_account = os.getenv('GOOGLE_SERVICE_ACCOUNT_EMAIL')
             if service_account:
                 key_data = os.getenv('GOOGLE_SERVICE_ACCOUNT_KEY')
                 if key_data:
-                    # Create temporary file for service account key
-                    import tempfile
-                    import json
-                    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-                        f.write(key_data)
-                        temp_key_path = f.name
-                    
-                    credentials = ee.ServiceAccountCredentials(service_account, temp_key_path)
-                    ee.Initialize(credentials)
-                    
-                    # Clean up temporary file
-                    os.unlink(temp_key_path)
+                    try:
+                        # Create temporary file for service account key
+                        import tempfile
+                        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                            f.write(key_data)
+                            temp_key_path = f.name
+                        
+                        credentials = ee.ServiceAccountCredentials(service_account, temp_key_path)
+                        ee.Initialize(credentials)
+                        
+                        # Clean up temporary file
+                        os.unlink(temp_key_path)
+                        print("✅ Earth Engine initialized with service account")
+                        
+                    except Exception as auth_error:
+                        print(f"Service account auth failed: {auth_error}")
+                        # Fall back to default initialization
+                        ee.Initialize()
+                        print("✅ Earth Engine initialized with default credentials")
                 else:
                     ee.Initialize()
+                    print("✅ Earth Engine initialized with default credentials")
             else:
-                # Fall back to user authentication or default
-                ee.Initialize()
+                # Try different initialization methods
+                try:
+                    # Try with default credentials first
+                    ee.Initialize()
+                    print("✅ Earth Engine initialized with default credentials")
+                except Exception:
+                    try:
+                        # Try with high volume endpoint
+                        ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
+                        print("✅ Earth Engine initialized with high-volume endpoint")
+                    except Exception:
+                        # Try authenticating first
+                        try:
+                            ee.Authenticate()
+                            ee.Initialize()
+                            print("✅ Earth Engine initialized after authentication")
+                        except Exception as final_error:
+                            print(f"All Earth Engine initialization methods failed: {final_error}")
+                            return False
+            
+            # Test the connection
+            try:
+                # Simple test query
+                test_image = ee.Image('COPERNICUS/S2_SR_HARMONIZED/20220101T100319_20220101T100320_T33UUP_20220103T174233')
+                test_info = test_image.getInfo()
+                if test_info:
+                    print("✅ Earth Engine connection verified")
+                    self.ee_initialized = True
+                    return True
+            except Exception as test_error:
+                print(f"Earth Engine connection test failed: {test_error}")
+                return False
             
             self.ee_initialized = True
             return True
             
         except Exception as e:
             print(f"Earth Engine initialization failed: {str(e)}")
+            print("ℹ️  Will use synthetic data for demonstration")
             return False
     
     def load_satellite_data(self, lat, lon, radius_km, start_date, end_date):
@@ -142,11 +181,32 @@ class DataLoader:
         # Generate synthetic NDVI values based on location characteristics
         np.random.seed(int(lat * lon * 1000) % 2**32)
         
-        # Create realistic NDVI distribution
+        # Create realistic NDVI distribution based on geographic location
         n_pixels = 1000
-        base_ndvi = 0.4 + 0.3 * np.random.beta(2, 2, n_pixels)  # Realistic vegetation distribution
-        noise = np.random.normal(0, 0.05, n_pixels)
+        
+        # Adjust vegetation patterns based on location
+        if 32 <= lat <= 42 and -125 <= lon <= -114:  # California region
+            # More diverse vegetation with some dry areas
+            base_ndvi = np.concatenate([
+                np.random.beta(1.5, 3, 300),  # Dry/sparse vegetation
+                np.random.beta(3, 2, 400),    # Moderate vegetation
+                np.random.beta(5, 1.5, 300)  # Dense vegetation
+            ])
+        elif 40 <= lat <= 50:  # Northern regions - more forest
+            base_ndvi = np.random.beta(4, 2, n_pixels)
+        else:  # Other regions - mixed
+            base_ndvi = np.random.beta(2.5, 2, n_pixels)
+        
+        # Scale to NDVI range and add noise
+        base_ndvi = 0.1 + 0.7 * base_ndvi  # Scale to 0.1-0.8 range
+        noise = np.random.normal(0, 0.03, n_pixels)
         ndvi_values = np.clip(base_ndvi + noise, -1, 1)
+        
+        # Add seasonal variation
+        month = datetime.now().month
+        seasonal_factor = 0.8 + 0.4 * np.sin(2 * np.pi * (month - 3) / 12)  # Peak in summer
+        ndvi_values = ndvi_values * seasonal_factor
+        ndvi_values = np.clip(ndvi_values, -1, 1)
         
         return {
             'source': 'synthetic',
@@ -160,7 +220,12 @@ class DataLoader:
             },
             'ndvi_values': ndvi_values.tolist(),
             'vegetation_percentage': len(ndvi_values[ndvi_values > 0.3]) / len(ndvi_values) * 100,
-            'image_count': 5
+            'image_count': np.random.randint(3, 8),
+            'cloud_coverage': np.random.uniform(5, 25),
+            'acquisition_dates': [
+                (datetime.now() - timedelta(days=i*7)).strftime('%Y-%m-%d') 
+                for i in range(5)
+            ]
         }
     
     def load_lidar_data(self, lat, lon, radius_km):
