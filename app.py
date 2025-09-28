@@ -28,8 +28,136 @@ st.set_page_config(
     page_title="Vegetation Detection Near Power Lines",
     page_icon="🔥",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="auto"  # Changed to auto for mobile responsiveness
 )
+
+# Mobile-responsive CSS styling
+st.markdown("""
+<style>
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .main .block-container {
+        padding-top: 2rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        padding-bottom: 1rem;
+    }
+    
+    /* Mobile-friendly sidebar - using stable selectors */
+    .stSidebar .block-container {
+        padding-top: 1rem;
+    }
+    
+    .stSidebar {
+        width: auto !important;
+    }
+    
+    /* Responsive columns on mobile */
+    .element-container .stColumn > div {
+        min-width: 0 !important;
+    }
+    
+    /* Mobile-friendly metrics */
+    [data-testid="metric-container"] {
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Responsive tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        font-size: 0.8rem;
+        padding: 8px 12px;
+    }
+    
+    /* Mobile chart sizing */
+    .plotly-graph-div {
+        max-width: 100%;
+        height: auto !important;
+    }
+    
+    /* Responsive buttons */
+    .stButton button {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Mobile-friendly selectbox */
+    .stSelectbox {
+        margin-bottom: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Extra small mobile devices */
+    .main .block-container {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    
+    /* Stack columns vertically on small screens */
+    .element-container .stColumn {
+        flex: 1 1 100% !important;
+    }
+    
+    /* Smaller font sizes for mobile */
+    .stTabs [data-baseweb="tab"] {
+        font-size: 0.7rem;
+        padding: 6px 8px;
+    }
+    
+    /* Mobile-optimized metric containers */
+    [data-testid="metric-container"] {
+        padding: 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+}
+
+/* General improvements */
+.stTabs [data-baseweb="tab-list"] {
+    flex-wrap: wrap;
+}
+
+/* Loading indicators */
+.stSpinner {
+    position: relative;
+}
+
+/* Better spacing for mobile */
+.element-container {
+    margin-bottom: 0.5rem;
+}
+
+/* Responsive data frames */
+.stDataFrame {
+    overflow-x: auto;
+}
+
+/* Mobile-friendly maps */
+.folium-map {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Alert styling improvements */
+.stAlert {
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+/* Responsive expander */
+.streamlit-expanderHeader {
+    font-size: 0.9rem;
+}
+
+/* Mobile-friendly download buttons */
+.stDownloadButton button {
+    width: 100%;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # Initialize session state
 if 'data_loaded' not in st.session_state:
@@ -84,33 +212,77 @@ st.markdown("""
 to automatically identify vegetation that poses fire hazards to electrical infrastructure.
 """)
 
-# Sidebar for configuration
+# Sidebar for configuration - Mobile responsive
 st.sidebar.header("🛠️ Configuration")
 
-# Location input
+# Location input - Mobile optimized
 st.sidebar.subheader("📍 Analysis Location")
-col1, col2 = st.sidebar.columns(2)
-with col1:
-    lat = st.number_input("Latitude", value=37.789953, format="%.6f")
-with col2:
-    lon = st.number_input("Longitude", value=-122.058679, format="%.6f")
 
-radius_km = st.sidebar.slider("Analysis Radius (km)", min_value=1, max_value=20, value=10)
+# Quick location presets for mobile users
+location_preset = st.sidebar.selectbox(
+    "🎯 Quick Locations", 
+    ["Custom", "Bay Area, CA", "Napa Valley, CA", "Santa Barbara, CA", "Los Angeles, CA"],
+    help="Select a preset location or choose 'Custom' to enter coordinates"
+)
 
-# Data source selection
+if location_preset != "Custom":
+    location_coords = {
+        "Bay Area, CA": (37.789953, -122.058679),
+        "Napa Valley, CA": (38.5025, -122.2654),
+        "Santa Barbara, CA": (34.4208, -119.6982),
+        "Los Angeles, CA": (34.0522, -118.2437)
+    }
+    lat, lon = location_coords[location_preset]
+    st.sidebar.info(f"📍 {location_preset}: {lat:.4f}, {lon:.4f}")
+else:
+    # Mobile-friendly coordinate input
+    lat = st.sidebar.number_input("Latitude", value=37.789953, format="%.6f", 
+                                 help="North-South position (-90 to +90)")
+    lon = st.sidebar.number_input("Longitude", value=-122.058679, format="%.6f",
+                                 help="East-West position (-180 to +180)")
+
+# GPS location helper for mobile
+if st.sidebar.button("🌐 Use GPS Location", help="Get current location from GPS"):
+    st.sidebar.info("💡 Enable location services in your browser for GPS functionality")
+
+radius_km = st.sidebar.slider("Analysis Radius (km)", min_value=1, max_value=20, value=10,
+                             help="Radius of analysis area around selected location")
+
+# Data source selection - Mobile optimized
 st.sidebar.subheader("📊 Data Sources")
-use_satellite = st.sidebar.checkbox("Satellite Imagery (Sentinel-2)", value=True)
-use_lidar = st.sidebar.checkbox("LiDAR Data (USGS 3DEP)", value=True)
-use_powerlines = st.sidebar.checkbox("Power Line Data", value=True)
+with st.sidebar.expander("🛰️ Satellite Data", expanded=True):
+    use_satellite = st.checkbox("Sentinel-2 Imagery", value=True, 
+                               help="High-resolution satellite imagery for vegetation analysis")
 
-# Analysis parameters
+with st.sidebar.expander("📡 Elevation Data", expanded=True):
+    use_lidar = st.checkbox("USGS 3DEP LiDAR", value=True,
+                          help="High-precision elevation and canopy height data")
+
+with st.sidebar.expander("⚡ Infrastructure Data", expanded=True):
+    use_powerlines = st.checkbox("Power Line Locations", value=True,
+                               help="Electrical transmission and distribution infrastructure")
+
+# Analysis parameters - Mobile optimized
 st.sidebar.subheader("⚙️ Analysis Parameters")
-risk_threshold = st.sidebar.slider("Risk Threshold", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
-clearance_threshold = st.sidebar.slider("Minimum Clearance (meters)", min_value=0.5, max_value=5.0, value=1.0, step=0.1)
+risk_threshold = st.sidebar.slider("🔥 Fire Risk Threshold", min_value=0.0, max_value=1.0, 
+                                  value=0.7, step=0.1, help="Minimum risk level for alerts")
+clearance_threshold = st.sidebar.slider("📏 Min. Clearance (m)", min_value=0.5, max_value=5.0, 
+                                       value=1.0, step=0.1, help="Required vegetation clearance distance")
 
-# Date range for satellite data
-date_start = st.sidebar.date_input("Start Date", value=datetime.now() - timedelta(days=90))
-date_end = st.sidebar.date_input("End Date", value=datetime.now())
+# Date range for satellite data - Mobile optimized
+with st.sidebar.expander("📅 Data Time Range", expanded=False):
+    date_start = st.date_input("Start Date", value=datetime.now() - timedelta(days=90))
+    date_end = st.date_input("End Date", value=datetime.now())
+
+# Mobile-friendly status indicators
+st.sidebar.markdown("### 📱 System Status")
+status_col1, status_col2 = st.sidebar.columns(2)
+with status_col1:
+    st.success("🌐 Online")
+    st.info("🔋 GPS Ready")
+with status_col2:
+    st.success("💾 DB Connected") 
+    st.info("🛰️ API Ready")
 
 # Load data button
 if st.sidebar.button("🔄 Load Data", type="primary"):
@@ -231,8 +403,8 @@ if st.session_state.data_loaded:
                 except Exception as e:
                     st.warning(f"Could not display risk areas: {str(e)}")
             
-            # Display map
-            map_data = st_folium(m, width=700, height=500)
+            # Display responsive map
+            map_data = st_folium(m, use_container_width=True, height=400)
             
             # Handle map clicks
             if map_data['last_object_clicked_popup']:

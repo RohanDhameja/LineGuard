@@ -19,6 +19,61 @@ class Visualizer:
             'vegetation': ['brown', 'yellow', 'lightgreen', 'darkgreen'],
             'height': ['lightblue', 'blue', 'darkblue']
         }
+        
+        # Mobile-responsive chart configuration
+        self.mobile_config = {
+            'responsive': True,
+            'displayModeBar': True,
+            'displaylogo': False,
+            'modeBarButtonsToRemove': ['select2d', 'lasso2d', 'autoScale2d'],
+            'modeBarButtonsToAdd': ['pan2d', 'zoom2d'],
+            'scrollZoom': True,
+            'doubleClick': 'reset+autosize'
+        }
+        
+        # Mobile-friendly layout defaults
+        self.mobile_layout = {
+            'margin': {'l': 40, 'r': 20, 't': 40, 'b': 40},
+            'showlegend': True,
+            'legend': {
+                'orientation': 'h',
+                'yanchor': 'bottom',
+                'y': -0.2,
+                'xanchor': 'center',
+                'x': 0.5,
+                'font': {'size': 10}
+            },
+            'font': {'size': 12},
+            'autosize': True,
+            'height': 400  # Mobile-optimized height
+        }
+    
+    def apply_mobile_config(self, fig, title=None, custom_config=None):
+        """
+        Apply mobile-responsive configuration to any Plotly figure.
+        
+        Args:
+            fig: Plotly figure object
+            title: Optional custom title
+            custom_config: Optional additional configuration
+        
+        Returns:
+            Updated figure with mobile-responsive configuration
+        """
+        layout_config = self.mobile_layout.copy()
+        
+        if title:
+            layout_config['title'] = {
+                'text': title,
+                'x': 0.5,
+                'font': {'size': 16}
+            }
+        
+        if custom_config:
+            layout_config.update(custom_config)
+        
+        fig.update_layout(**layout_config)
+        return fig
     
     def create_risk_heatmap(self, risk_data):
         """
@@ -50,15 +105,23 @@ class Visualizer:
         center_lat = risk_data['lat'].mean()
         center_lon = risk_data['lon'].mean()
         
-        fig.update_layout(
-            mapbox_style="open-street-map",
-            mapbox=dict(
+        # Apply mobile-responsive layout
+        layout_config = self.mobile_layout.copy()
+        layout_config.update({
+            'mapbox_style': "open-street-map",
+            'mapbox': dict(
                 center=go.layout.mapbox.Center(lat=center_lat, lon=center_lon),
                 zoom=12
             ),
-            title="Fire Risk Heatmap",
-            height=600
-        )
+            'title': {
+                'text': "🔥 Fire Risk Heatmap", 
+                'x': 0.5,
+                'font': {'size': 16}
+            },
+            'height': 450  # Mobile-optimized height for maps
+        })
+        
+        fig.update_layout(**layout_config)
         
         return fig
     
@@ -93,7 +156,17 @@ class Visualizer:
             }
         )
         
-        fig.update_layout(height=600)
+        # Apply mobile-responsive layout
+        layout_config = self.mobile_layout.copy()
+        layout_config.update({
+            'height': 450,  # Mobile-optimized height
+            'title': {
+                'text': "🌿 Vegetation Density (NDVI)",
+                'x': 0.5,
+                'font': {'size': 16}
+            }
+        })
+        fig.update_layout(**layout_config)
         return fig
     
     def create_clearance_analysis_chart(self, clearance_data):
@@ -176,11 +249,18 @@ class Visualizer:
                 row=2, col=2
             )
         
-        fig.update_layout(
-            height=800,
-            title_text="Power Line Clearance Analysis",
-            showlegend=False
-        )
+        # Apply mobile-responsive layout
+        layout_config = self.mobile_layout.copy()
+        layout_config.update({
+            'title': {
+                'text': "⚡ Power Line Clearance Analysis",
+                'x': 0.5,
+                'font': {'size': 16}
+            },
+            'showlegend': False,
+            'height': 500  # Slightly taller for complex multi-subplot
+        })
+        fig.update_layout(**layout_config)
         
         return fig
     
@@ -231,10 +311,16 @@ class Visualizer:
             )
         )])
         
-        fig.update_layout(
-            title="Priority Areas for Vegetation Management",
-            height=600
-        )
+        # Apply mobile-responsive layout
+        layout_config = self.mobile_layout.copy()
+        layout_config.update({
+            'title': {
+                'text': "🎯 Priority Areas for Vegetation Management",
+                'x': 0.5,
+                'font': {'size': 16}
+            }
+        })
+        fig.update_layout(**layout_config)
         
         return fig
     
@@ -303,11 +389,17 @@ class Visualizer:
             row=2, col=2
         )
         
-        fig.update_layout(
-            height=600,
-            title_text="Historical Trend Analysis",
-            showlegend=False
-        )
+        # Apply mobile-responsive layout
+        layout_config = self.mobile_layout.copy()
+        layout_config.update({
+            'title': {
+                'text': "📈 Historical Trend Analysis",
+                'x': 0.5,
+                'font': {'size': 16}
+            },
+            'showlegend': False
+        })
+        fig.update_layout(**layout_config)
         
         return fig
     
