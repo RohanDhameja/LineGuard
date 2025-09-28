@@ -288,7 +288,7 @@ with status_col2:
 if st.sidebar.button("🔄 Load Data", type="primary"):
     with st.spinner("Loading data..."):
         try:
-            # Store parameters in session state
+            # Store parameters in session state - convert dates to strings for JSON serialization
             st.session_state.analysis_params = {
                 'lat': lat,
                 'lon': lon,
@@ -298,8 +298,8 @@ if st.sidebar.button("🔄 Load Data", type="primary"):
                 'use_powerlines': use_powerlines,
                 'risk_threshold': risk_threshold,
                 'clearance_threshold': clearance_threshold,
-                'date_start': date_start,
-                'date_end': date_end
+                'date_start': date_start.strftime('%Y-%m-%d') if hasattr(date_start, 'strftime') else str(date_start),
+                'date_end': date_end.strftime('%Y-%m-%d') if hasattr(date_end, 'strftime') else str(date_end)
             }
             
             # Load satellite data
@@ -829,11 +829,21 @@ if st.session_state.data_loaded:
                     st.metric("Max NDVI", f"{ndvi_stats.get('max', 0):.3f}")
                     st.metric("Vegetation Coverage", f"{ndvi_stats.get('vegetation_percentage', 0):.1f}%")
                 
-                # NDVI histogram
+                # NDVI histogram - fix data length mismatch
                 if hasattr(st.session_state, 'analysis_results') and 'ndvi_histogram' in st.session_state.analysis_results:
+                    hist_data = st.session_state.analysis_results['ndvi_histogram']
+                    bins = hist_data['bins']
+                    counts = hist_data['counts']
+                    
+                    # Ensure data lengths match by using bin centers
+                    if len(bins) > len(counts):
+                        # Convert bin edges to bin centers
+                        bin_centers = [(bins[i] + bins[i+1])/2 for i in range(len(bins)-1)]
+                        bins = bin_centers[:len(counts)]
+                    
                     fig = px.bar(
-                        x=st.session_state.analysis_results['ndvi_histogram']['bins'],
-                        y=st.session_state.analysis_results['ndvi_histogram']['counts'],
+                        x=bins,
+                        y=counts,
                         title="NDVI Distribution"
                     )
                     st.plotly_chart(fig, use_container_width=True)
