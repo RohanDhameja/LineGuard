@@ -1,0 +1,528 @@
+import streamlit as st
+import folium
+from streamlit_folium import st_folium
+import pandas as pd
+import numpy as np
+import geopandas as gpd
+from datetime import datetime, timedelta
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import os
+import tempfile
+import warnings
+warnings.filterwarnings('ignore')
+
+# Import custom utilities
+from utils.data_loader import DataLoader
+from utils.geospatial import GeospatialProcessor
+from utils.risk_assessment import RiskAssessment
+from utils.visualization import Visualizer
+
+# Page configuration
+st.set_page_config(
+    page_title="Vegetation Detection Near Power Lines",
+    page_icon="🔥",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Initialize session state
+if 'data_loaded' not in st.session_state:
+    st.session_state.data_loaded = False
+if 'analysis_complete' not in st.session_state:
+    st.session_state.analysis_complete = False
+if 'selected_location' not in st.session_state:
+    st.session_state.selected_location = None
+
+# Initialize components
+@st.cache_resource
+def initialize_components():
+    data_loader = DataLoader()
+    geospatial = GeospatialProcessor()
+    risk_assessment = RiskAssessment()
+    visualizer = Visualizer()
+    return data_loader, geospatial, risk_assessment, visualizer
+
+data_loader, geospatial, risk_assessment, visualizer = initialize_components()
+
+# Main title and description
+st.title("🔥 Vegetation Detection Near Power Lines")
+st.markdown("""
+**Wildfire Risk Prevention System** - Combining satellite imagery, LiDAR data, and computer vision 
+to automatically identify vegetation that poses fire hazards to electrical infrastructure.
+""")
+
+# Sidebar for configuration
+st.sidebar.header("🛠️ Configuration")
+
+# Location input
+st.sidebar.subheader("📍 Analysis Location")
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    lat = st.number_input("Latitude", value=37.789953, format="%.6f")
+with col2:
+    lon = st.number_input("Longitude", value=-122.058679, format="%.6f")
+
+radius_km = st.sidebar.slider("Analysis Radius (km)", min_value=1, max_value=20, value=10)
+
+# Data source selection
+st.sidebar.subheader("📊 Data Sources")
+use_satellite = st.sidebar.checkbox("Satellite Imagery (Sentinel-2)", value=True)
+use_lidar = st.sidebar.checkbox("LiDAR Data (USGS 3DEP)", value=True)
+use_powerlines = st.sidebar.checkbox("Power Line Data", value=True)
+
+# Analysis parameters
+st.sidebar.subheader("⚙️ Analysis Parameters")
+risk_threshold = st.sidebar.slider("Risk Threshold", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
+clearance_threshold = st.sidebar.slider("Minimum Clearance (meters)", min_value=0.5, max_value=5.0, value=1.0, step=0.1)
+
+# Date range for satellite data
+date_start = st.sidebar.date_input("Start Date", value=datetime.now() - timedelta(days=90))
+date_end = st.sidebar.date_input("End Date", value=datetime.now())
+
+# Load data button
+if st.sidebar.button("🔄 Load Data", type="primary"):
+    with st.spinner("Loading data..."):
+        try:
+            # Store parameters in session state
+            st.session_state.analysis_params = {
+                'lat': lat,
+                'lon': lon,
+                'radius_km': radius_km,
+                'use_satellite': use_satellite,
+                'use_lidar': use_lidar,
+                'use_powerlines': use_powerlines,
+                'risk_threshold': risk_threshold,
+                'clearance_threshold': clearance_threshold,
+                'date_start': date_start,
+                'date_end': date_end
+            }
+            
+            # Load satellite data
+            if use_satellite:
+                st.session_state.satellite_data = data_loader.load_satellite_data(
+                    lat, lon, radius_km, date_start, date_end
+                )
+            
+            # Load LiDAR data
+            if use_lidar:
+                st.session_state.lidar_data = data_loader.load_lidar_data(
+                    lat, lon, radius_km
+                )
+            
+            # Load power line data
+            if use_powerlines:
+                st.session_state.powerline_data = data_loader.load_powerline_data(
+                    lat, lon, radius_km
+                )
+            
+            st.session_state.data_loaded = True
+            st.success("✅ Data loaded successfully!")
+            
+        except Exception as e:
+            st.error(f"❌ Error loading data: {str(e)}")
+
+# Main content area
+if st.session_state.data_loaded:
+    # Create tabs for different views
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "🗺️ Interactive Map", 
+        "📊 Risk Dashboard", 
+        "🌿 Vegetation Analysis", 
+        "⚡ Power Line Analysis", 
+        "📈 Reports"
+    ])
+    
+    with tab1:
+        st.subheader("Interactive Map View")
+        
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            # Create base map
+            center_lat = st.session_state.analysis_params['lat']
+            center_lon = st.session_state.analysis_params['lon']
+            
+            m = folium.Map(
+                location=[center_lat, center_lon],
+                zoom_start=12,
+                tiles='OpenStreetMap'
+            )
+            
+            # Add center point
+            folium.Marker(
+                [center_lat, center_lon],
+                popup="Analysis Center",
+                icon=folium.Icon(color='red', icon='crosshairs')
+            ).add_to(m)
+            
+            # Add analysis radius circle
+            folium.Circle(
+                location=[center_lat, center_lon],
+                radius=st.session_state.analysis_params['radius_km'] * 1000,
+                popup=f"Analysis Area ({st.session_state.analysis_params['radius_km']} km)",
+                color='blue',
+                fillColor='lightblue',
+                fillOpacity=0.2
+            ).add_to(m)
+            
+            # Add power lines if available
+            if hasattr(st.session_state, 'powerline_data') and st.session_state.powerline_data is not None:
+                try:
+                    powerline_gdf = st.session_state.powerline_data
+                    if not powerline_gdf.empty:
+                        # Add power lines to map
+                        for idx, row in powerline_gdf.iterrows():
+                            if row.geometry.geom_type == 'LineString':
+                                coords = [[lat, lon] for lon, lat in row.geometry.coords]
+                                folium.PolyLine(
+                                    coords,
+                                    color='red',
+                                    weight=3,
+                                    popup=f"Power Line Segment {idx}"
+                                ).add_to(m)
+                except Exception as e:
+                    st.warning(f"Could not display power lines: {str(e)}")
+            
+            # Add vegetation risk areas if analysis is complete
+            if st.session_state.analysis_complete and hasattr(st.session_state, 'risk_areas'):
+                try:
+                    for risk_area in st.session_state.risk_areas:
+                        folium.CircleMarker(
+                            location=[risk_area['lat'], risk_area['lon']],
+                            radius=5,
+                            popup=f"Risk Score: {risk_area['risk_score']:.2f}",
+                            color='orange' if risk_area['risk_score'] > 0.7 else 'yellow',
+                            fillColor='red' if risk_area['risk_score'] > 0.8 else 'orange',
+                            fillOpacity=0.7
+                        ).add_to(m)
+                except Exception as e:
+                    st.warning(f"Could not display risk areas: {str(e)}")
+            
+            # Display map
+            map_data = st_folium(m, width=700, height=500)
+            
+            # Handle map clicks
+            if map_data['last_object_clicked_popup']:
+                st.session_state.selected_location = map_data['last_clicked']
+        
+        with col2:
+            st.subheader("Map Layers")
+            
+            # Layer controls
+            show_satellite = st.checkbox("Satellite Overlay", value=False)
+            show_ndvi = st.checkbox("NDVI Layer", value=False)
+            show_canopy_height = st.checkbox("Canopy Height", value=False)
+            show_risk_heatmap = st.checkbox("Risk Heatmap", value=False)
+            
+            if st.session_state.selected_location:
+                st.subheader("Selected Location")
+                loc = st.session_state.selected_location
+                st.write(f"**Lat:** {loc['lat']:.6f}")
+                st.write(f"**Lon:** {loc['lng']:.6f}")
+                
+                if st.button("Analyze This Point"):
+                    # Perform point-specific analysis
+                    st.info("Point analysis would be implemented here")
+    
+    with tab2:
+        st.subheader("Risk Assessment Dashboard")
+        
+        # Run analysis button
+        if st.button("🔍 Run Risk Analysis", type="primary"):
+            with st.spinner("Performing risk analysis..."):
+                try:
+                    # Perform vegetation detection and risk assessment
+                    analysis_results = risk_assessment.perform_analysis(
+                        satellite_data=getattr(st.session_state, 'satellite_data', None),
+                        lidar_data=getattr(st.session_state, 'lidar_data', None),
+                        powerline_data=getattr(st.session_state, 'powerline_data', None),
+                        parameters=st.session_state.analysis_params
+                    )
+                    
+                    st.session_state.analysis_results = analysis_results
+                    st.session_state.analysis_complete = True
+                    st.success("✅ Analysis complete!")
+                    
+                except Exception as e:
+                    st.error(f"❌ Analysis failed: {str(e)}")
+        
+        if st.session_state.analysis_complete:
+            results = st.session_state.analysis_results
+            
+            # Key metrics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    "High Risk Areas", 
+                    f"{results.get('high_risk_count', 0)}", 
+                    delta=f"{results.get('risk_change', 0)}%"
+                )
+            
+            with col2:
+                st.metric(
+                    "Avg Clearance Distance", 
+                    f"{results.get('avg_clearance', 0):.1f}m",
+                    delta=f"{results.get('clearance_change', 0):.1f}m"
+                )
+            
+            with col3:
+                st.metric(
+                    "Vegetation Density", 
+                    f"{results.get('vegetation_density', 0):.1%}",
+                    delta=f"{results.get('density_change', 0):.1%}%"
+                )
+            
+            with col4:
+                st.metric(
+                    "Risk Score", 
+                    f"{results.get('overall_risk', 0):.2f}",
+                    delta=f"{results.get('risk_trend', 0):.2f}"
+                )
+            
+            # Risk distribution chart
+            st.subheader("Risk Distribution")
+            
+            if 'risk_distribution' in results:
+                fig = px.histogram(
+                    x=results['risk_distribution'],
+                    nbins=20,
+                    title="Distribution of Risk Scores",
+                    labels={'x': 'Risk Score', 'y': 'Count'}
+                )
+                fig.update_layout(showlegend=False)
+                st.plotly_chart(fig, use_container_width=True)
+            
+            # Priority areas table
+            st.subheader("Priority Areas for Maintenance")
+            
+            if 'priority_areas' in results:
+                priority_df = pd.DataFrame(results['priority_areas'])
+                if not priority_df.empty:
+                    st.dataframe(
+                        priority_df.style.format({
+                            'risk_score': '{:.3f}',
+                            'clearance_distance': '{:.2f}m',
+                            'vegetation_height': '{:.2f}m'
+                        }),
+                        use_container_width=True
+                    )
+                else:
+                    st.info("No high-priority areas identified.")
+    
+    with tab3:
+        st.subheader("Vegetation Analysis")
+        
+        if hasattr(st.session_state, 'satellite_data'):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("NDVI Analysis")
+                
+                # NDVI statistics
+                if hasattr(st.session_state, 'analysis_results'):
+                    ndvi_stats = st.session_state.analysis_results.get('ndvi_stats', {})
+                    
+                    st.metric("Mean NDVI", f"{ndvi_stats.get('mean', 0):.3f}")
+                    st.metric("Max NDVI", f"{ndvi_stats.get('max', 0):.3f}")
+                    st.metric("Vegetation Coverage", f"{ndvi_stats.get('vegetation_percentage', 0):.1f}%")
+                
+                # NDVI histogram
+                if 'ndvi_histogram' in st.session_state.analysis_results:
+                    fig = px.bar(
+                        x=st.session_state.analysis_results['ndvi_histogram']['bins'],
+                        y=st.session_state.analysis_results['ndvi_histogram']['counts'],
+                        title="NDVI Distribution"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                st.subheader("Vegetation Health Index")
+                
+                # Health categories
+                if hasattr(st.session_state, 'analysis_results'):
+                    health_data = st.session_state.analysis_results.get('vegetation_health', {})
+                    
+                    if health_data:
+                        fig = px.pie(
+                            values=list(health_data.values()),
+                            names=list(health_data.keys()),
+                            title="Vegetation Health Categories"
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+        
+        else:
+            st.info("Load satellite data to perform vegetation analysis.")
+    
+    with tab4:
+        st.subheader("Power Line Analysis")
+        
+        if hasattr(st.session_state, 'powerline_data'):
+            powerline_gdf = st.session_state.powerline_data
+            
+            if not powerline_gdf.empty:
+                st.success(f"✅ Loaded {len(powerline_gdf)} power line segments")
+                
+                # Segmentation analysis
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.subheader("Segmentation Analysis")
+                    
+                    if st.button("🔧 Segment Power Lines"):
+                        with st.spinner("Segmenting power lines into 1m segments..."):
+                            try:
+                                segmented_lines = geospatial.segment_powerlines(
+                                    powerline_gdf, 
+                                    segment_length=1.0
+                                )
+                                st.session_state.segmented_powerlines = segmented_lines
+                                st.success(f"✅ Created {len(segmented_lines)} 1-meter segments")
+                            except Exception as e:
+                                st.error(f"❌ Segmentation failed: {str(e)}")
+                    
+                    if hasattr(st.session_state, 'segmented_powerlines'):
+                        segments = st.session_state.segmented_powerlines
+                        st.metric("Total Segments", len(segments))
+                        st.metric("Total Length", f"{len(segments) * 1.0:.0f}m")
+                
+                with col2:
+                    st.subheader("Proximity Analysis")
+                    
+                    if hasattr(st.session_state, 'analysis_results'):
+                        proximity_stats = st.session_state.analysis_results.get('proximity_stats', {})
+                        
+                        st.metric("Segments < 1m from vegetation", proximity_stats.get('critical_segments', 0))
+                        st.metric("Average vegetation distance", f"{proximity_stats.get('avg_distance', 0):.2f}m")
+                        st.metric("Minimum recorded distance", f"{proximity_stats.get('min_distance', 0):.2f}m")
+                
+                # Power line details table
+                st.subheader("Power Line Details")
+                display_df = powerline_gdf.drop(columns=['geometry']).head(10)
+                st.dataframe(display_df, use_container_width=True)
+            
+            else:
+                st.warning("No power line data found in the specified area.")
+        
+        else:
+            st.info("Load power line data to perform analysis.")
+    
+    with tab5:
+        st.subheader("Analysis Reports")
+        
+        if st.session_state.analysis_complete:
+            # Report generation
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("Export Options")
+                
+                export_format = st.selectbox("Export Format", ["CSV", "GeoJSON", "Shapefile", "PDF Report"])
+                include_map = st.checkbox("Include Map Images", value=True)
+                include_stats = st.checkbox("Include Statistics", value=True)
+                include_recommendations = st.checkbox("Include Recommendations", value=True)
+                
+                if st.button("📥 Generate Report"):
+                    with st.spinner("Generating report..."):
+                        try:
+                            report_data = visualizer.generate_report(
+                                st.session_state.analysis_results,
+                                format=export_format.lower(),
+                                include_map=include_map,
+                                include_stats=include_stats,
+                                include_recommendations=include_recommendations
+                            )
+                            
+                            # Create download link
+                            st.download_button(
+                                label=f"Download {export_format} Report",
+                                data=report_data['content'],
+                                file_name=report_data['filename'],
+                                mime=report_data['mime_type']
+                            )
+                            
+                        except Exception as e:
+                            st.error(f"❌ Report generation failed: {str(e)}")
+            
+            with col2:
+                st.subheader("Summary Statistics")
+                
+                results = st.session_state.analysis_results
+                
+                summary_data = {
+                    "Analysis Date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "Location": f"{st.session_state.analysis_params['lat']:.6f}, {st.session_state.analysis_params['lon']:.6f}",
+                    "Analysis Radius": f"{st.session_state.analysis_params['radius_km']} km",
+                    "Risk Threshold": f"{st.session_state.analysis_params['risk_threshold']:.1f}",
+                    "High Risk Areas": results.get('high_risk_count', 0),
+                    "Average Risk Score": f"{results.get('overall_risk', 0):.3f}",
+                    "Vegetation Coverage": f"{results.get('vegetation_density', 0):.1%}",
+                    "Critical Segments": results.get('proximity_stats', {}).get('critical_segments', 0)
+                }
+                
+                for key, value in summary_data.items():
+                    st.text(f"{key}: {value}")
+                
+                # Recommendations
+                st.subheader("Recommendations")
+                recommendations = results.get('recommendations', [])
+                if recommendations:
+                    for i, rec in enumerate(recommendations, 1):
+                        st.write(f"{i}. {rec}")
+                else:
+                    st.info("No specific recommendations generated.")
+        
+        else:
+            st.info("Complete the risk analysis to generate reports.")
+
+else:
+    # Welcome screen
+    st.markdown("""
+    ## Welcome to the Vegetation Detection System
+    
+    This application helps prevent wildfire risks by analyzing vegetation proximity to power lines using:
+    
+    - 🛰️ **Satellite Imagery**: Sentinel-2 data for vegetation detection via NDVI
+    - 📡 **LiDAR Data**: USGS 3DEP for precise canopy height measurements
+    - ⚡ **Power Line Data**: Infrastructure locations and specifications
+    - 🔥 **Risk Assessment**: ML-based analysis of fire hazard probability
+    
+    ### Getting Started
+    1. Configure your analysis location in the sidebar
+    2. Select the data sources you want to use
+    3. Click "Load Data" to begin
+    4. Navigate through the tabs to explore results
+    
+    ### Data Sources
+    - **Satellite Data**: Automatically fetched from Google Earth Engine
+    - **LiDAR Data**: Downloaded from USGS 3D Elevation Program
+    - **Power Lines**: California Electric Transmission Lines dataset
+    
+    ⚠️ **Note**: Initial data loading may take several minutes depending on the analysis area size.
+    """)
+    
+    # Sample location shortcuts
+    st.subheader("📍 Sample Locations")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🌲 Bay Area, CA"):
+            st.experimental_set_query_params(lat=37.789953, lon=-122.058679)
+    
+    with col2:
+        if st.button("🔥 Napa Valley, CA"):
+            st.experimental_set_query_params(lat=38.5025, lon=-122.2654)
+    
+    with col3:
+        if st.button("⛰️ Santa Barbara, CA"):
+            st.experimental_set_query_params(lat=34.4208, lon=-119.6982)
+
+# Footer
+st.markdown("---")
+st.markdown("""
+<div style='text-align: center; color: #666; font-size: 0.8em;'>
+🔥 Vegetation Detection Near Power Lines | Built with Streamlit | Data: Sentinel-2, USGS 3DEP, CEC
+</div>
+""", unsafe_allow_html=True)
