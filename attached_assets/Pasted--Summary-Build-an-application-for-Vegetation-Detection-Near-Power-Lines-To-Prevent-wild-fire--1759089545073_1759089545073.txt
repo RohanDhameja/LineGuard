@@ -1,0 +1,253 @@
+
+## Summary
+
+Build an application for Vegetation Detection Near Power Lines To Prevent wild fire risk. The solution combines satellite imagery, LiDAR data, and computer vision techniques to automatically identify vegetation that poses fire hazards to electrical infrastructure.
+
+## Problem Statement
+
+Vegetation growing too close to power lines creates significant fire risks through:
+- Direct contact causing arcing and sparks
+- Reduced clearance distances during high winds
+- Dry vegetation creating kindling for electrical faults
+- Compromised power line integrity
+
+## Architecture
+
+### 1. Data Input Sources
+- **Satellite Imagery**: High-resolution multispectral images
+- **LiDAR Data**: 3D point clouds for height measurements
+- **Power Line Infrastructure Data**: GPS coordinates and specifications
+- **Weather Data**: Wind patterns, humidity, temperature
+- **Historical Fire Data**: Previous incident locations and causes
+
+### 2. Model Components
+
+#### A. Image Segmentation Model
+```
+Input: Satellite/Aerial Images (RGB + NIR bands)
+Output: Pixel-wise vegetation classification
+```
+
+#### B. Distance Calculation Module
+```
+Input: Segmented vegetation + Power line coordinates
+Process: Euclidean distance computation with height adjustment
+Output: Minimum clearance distances
+```
+
+#### C. Risk Assessment Model
+```
+Input: Distance measurements + Environmental factors
+Architecture: Random Forest or Gradient Boosting
+Output: Fire risk probability score (0-1)
+```
+
+
+## Available Datasets
+
+### 1. Satellite Imagery Sources
+
+#### **Sentinel-2 (ESA)**
+- **Source**: European Space Agency Copernicus Program
+- **Specs**: 10-60m resolution, 13 spectral bands
+- **URL**: https://scihub.copernicus.eu/
+
+### Below code snippet to get GeoTiff data for lat-long: 37.789953, -122.058679 and a radius of 10 KM.
+
+import ee
+import geemap
+from datetime import datetime, timedelta
+
+# Initialize Earth Engine
+ee.Initialize()
+
+# Location and buffer (10 km around point)
+lat, lon = 37.789953, -122.058679
+point = ee.Geometry.Point(lon, lat)
+region = point.buffer(10000).bounds()  # 10 km buffer
+
+# Sentinel-2 surface reflectance dataset
+s2 = (ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+      .filterBounds(region)
+      .filterDate('2024-06-01', '2024-09-01')  # pick recent summer months
+      .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))
+      .median())  # median composite to reduce clouds
+
+# Compute NDVI = (NIR - Red) / (NIR + Red)
+ndvi = s2.normalizedDifference(['B8', 'B4']).rename('NDVI')
+
+# Set visualization
+vis_params = {'min': 0, 'max': 1, 'palette': ['brown', 'yellow', 'green']}
+
+# Create interactive map
+Map = geemap.Map(center=[lat, lon], zoom=11)
+Map.addLayer(ndvi, vis_params, 'NDVI')
+Map.addLayer(point, {}, 'Location')
+Map
+
+# Export GeoTIFF
+task = ee.batch.Export.image.toDrive(
+    image=ndvi,
+    description='NDVI_export',
+    folder='EarthEngine',
+    fileNamePrefix='ndvi_10km',
+    region=region,
+    scale=10,   # Sentinel-2 resolution
+    crs='EPSG:4326',
+    maxPixels=1e13
+)
+task.start()
+print("Export started. Check your Google Drive > EarthEngine folder.")
+
+
+
+### 2. LiDAR Data Sources
+
+#### **USGS 3D Elevation Program (3DEP)**
+- **Source**: U.S. Geological Survey
+- **Coverage**: Entire United States
+- **Resolution**: 1-2 points per square meter
+- **Use Case**: Vegetation height and power line clearance
+- **URL**: https://www.usgs.gov/3d-elevation-program
+
+##### ** Sample code to build CHM (Canopy Height Model)
+import os
+import requests
+import subprocess
+from shapely.geometry import Point
+from shapely.ops import transform
+import pyproj
+
+# --------------------------
+# CONFIGURATION
+# --------------------------
+LAT, LON = 37.789953, -122.058679
+RADIUS_KM = 10
+OUTPUT_DIR = "lidar_data"
+CHM_RES = 1.0  # meters
+CHM_FILE = "canopy_height.tif"
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# --------------------------
+# STEP 1. Build bounding box around point
+# --------------------------
+wgs84 = pyproj.CRS("EPSG:4326")
+aea = pyproj.CRS("EPSG:5070")  # Albers Equal Area (meters)
+project = pyproj.Transformer.from_crs(wgs84, aea, always_xy=True).transform
+buffer_geom = transform(project, Point(LON, LAT)).buffer(RADIUS_KM * 1000)  # meters buffer
+project_back = pyproj.Transformer.from_crs(aea, wgs84, always_xy=True).transform
+bbox = transform(project_back, buffer_geom).bounds  # (minx, miny, maxx, maxy)
+
+print("Bounding box:", bbox)
+
+# --------------------------
+# STEP 2. Query USGS 3DEP API
+# --------------------------
+API_URL = "https://apps.nationalmap.gov/3depdem/services"
+params = {
+    "bbox": ",".join(map(str, bbox)),
+    "datasets": "LPC",
+    "prodFormats": "LAS",
+    "outputFormat": "json"
+}
+
+print("Querying USGS 3DEP API...")
+resp = requests.get("https://apps.nationalmap.gov/tnmaccess/api/v1/products", params=params)
+resp.raise_for_status()
+data = resp.json()
+
+if not data["items"]:
+    raise RuntimeError("No LiDAR data found in this area!")
+
+# --------------------------
+# STEP 3. Download LAZ files
+# --------------------------
+laz_files = []
+for item in data["items"]:
+    url = item["downloadURL"]
+    fname = os.path.join(OUTPUT_DIR, os.path.basename(url))
+    if not os.path.exists(fname):
+        print(f"Downloading {url}...")
+        r = requests.get(url, stream=True)
+        with open(fname, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+    else:
+        print(f"Already downloaded: {fname}")
+    laz_files.append(fname)
+
+print(f"Downloaded {len(laz_files)} LAZ files.")
+
+# --------------------------
+# STEP 4. Create PDAL pipeline for CHM
+# --------------------------
+pipeline = {
+    "pipeline": laz_files + [
+        {"type": "filters.smrf"},  # ground classification
+        {"type": "filters.hag_delaunay"},  # compute height above ground
+        {
+            "type": "writers.gdal",
+            "filename": CHM_FILE,
+            "output_type": "max",
+            "resolution": CHM_RES,
+            "dimension": "HeightAboveGround"
+        }
+    ]
+}
+
+import json
+pipeline_file = os.path.join(OUTPUT_DIR, "pipeline.json")
+with open(pipeline_file, "w") as f:
+    json.dump(pipeline, f, indent=2)
+
+# --------------------------
+# STEP 5. Run PDAL
+# --------------------------
+print("Running PDAL pipeline...")
+subprocess.run(["pdal", "pipeline", pipeline_file], check=True)
+print(f"✅ Canopy Height Model saved as {CHM_FILE}")
+
+
+
+### 3. Power Line Infrastructure Data
+
+
+#### **Utility Company Data**
+- **Source**: California Electric Transmission Lines (CEC)
+
+##### ** Sample code to download Transmission line data:
+import geopandas as gpd
+from shapely.geometry import Point
+
+# Your location
+lat, lon = 37.789953, -122.058679
+buffer_km = 10
+
+# Download shapefile manually or via URL
+# (replace the URL below with the actual download link for the shapefile)
+shapefile_url = "https://data.ca.gov/dataset/california-electric-transmission-lines/download/shapefile.zip"
+
+# You may need to download & unzip (using requests + zipfile) or do that step manually.
+
+# Load the shapefile
+gdf = gpd.read_file("path/to/california_electric_transmission_lines.shp")
+
+# Create buffer
+pt = Point(lon, lat)
+gdf_proj = gdf.to_crs(epsg=3857)  # project to metric (Web Mercator) or better yet CA Albers
+pt_proj = gpd.GeoSeries([pt], crs="EPSG:4326").to_crs(epsg=3857).iloc[0]
+buffer = pt_proj.buffer(buffer_km * 1000)  # in meters
+
+# Filter lines that intersect that buffer
+lines_proj = gdf_proj[gdf_proj.geometry.intersects(buffer)]
+
+# Save result
+lines_proj.to_file("transmission_lines_10km.shp")
+print(f"Filtered down to {len(lines_proj)} line segments within {buffer_km} km.")
+
+
+### Divide powerline into multiple segments (1 meter length) and obtain Lat, Long.
+
+### Identify segmenets having distance from vegetation < 1 meter.  
+
