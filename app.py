@@ -509,15 +509,18 @@ else:
     
     with col1:
         if st.button("🌲 Bay Area, CA"):
-            st.experimental_set_query_params(lat=37.789953, lon=-122.058679)
+            st.query_params.lat = 37.789953
+            st.query_params.lon = -122.058679
     
     with col2:
         if st.button("🔥 Napa Valley, CA"):
-            st.experimental_set_query_params(lat=38.5025, lon=-122.2654)
+            st.query_params.lat = 38.5025
+            st.query_params.lon = -122.2654
     
     with col3:
         if st.button("⛰️ Santa Barbara, CA"):
-            st.experimental_set_query_params(lat=34.4208, lon=-119.6982)
+            st.query_params.lat = 34.4208
+            st.query_params.lon = -119.6982
 
 # Footer
 st.markdown("---")

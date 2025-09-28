@@ -131,7 +131,7 @@ class Visualizer:
         
         # Risk categories pie chart
         risk_categories = clearance_data['risk_score'].apply(self._categorize_risk_level)
-        risk_counts = risk_categories.value_counts()
+        risk_counts = pd.Series(risk_categories).value_counts()
         
         fig.add_trace(
             go.Pie(
