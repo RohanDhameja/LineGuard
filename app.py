@@ -19,6 +19,7 @@ from utils.geospatial import GeospatialProcessor
 from utils.risk_assessment import RiskAssessment
 from utils.visualization import Visualizer
 from utils.database import DatabaseManager
+from utils.ml_models import VegetationClassifier
 
 # Page configuration
 st.set_page_config(
@@ -43,14 +44,28 @@ def initialize_components():
     geospatial = GeospatialProcessor()
     risk_assessment = RiskAssessment()
     visualizer = Visualizer()
+    ml_classifier = VegetationClassifier()
+    
     try:
         db_manager = DatabaseManager()
     except Exception as e:
         st.warning(f"Database connection failed: {str(e)}. Some features may be limited.")
         db_manager = None
-    return data_loader, geospatial, risk_assessment, visualizer, db_manager
+    
+    # Initialize ML models with synthetic training data
+    try:
+        if not hasattr(ml_classifier, 'vegetation_classifier') or ml_classifier.vegetation_classifier is None:
+            with st.spinner("Initializing ML models..."):
+                training_data = ml_classifier.generate_synthetic_training_data(500)
+                ml_classifier.train_vegetation_classifier(training_data)
+                ml_classifier.train_risk_classifier(training_data)
+                print("✅ ML models initialized")
+    except Exception as e:
+        print(f"⚠️ ML model initialization failed: {str(e)}")
+    
+    return data_loader, geospatial, risk_assessment, visualizer, db_manager, ml_classifier
 
-data_loader, geospatial, risk_assessment, visualizer, db_manager = initialize_components()
+data_loader, geospatial, risk_assessment, visualizer, db_manager, ml_classifier = initialize_components()
 
 # Main title and description
 st.title("🔥 Vegetation Detection Near Power Lines")
@@ -349,14 +364,155 @@ if st.session_state.data_loaded:
                     st.info("No high-priority areas identified.")
     
     with tab3:
-        st.subheader("Vegetation Analysis")
+        st.subheader("🌿 Advanced Vegetation Analysis")
         
         if hasattr(st.session_state, 'satellite_data'):
+            # ML-powered vegetation classification
+            st.subheader("🤖 AI-Powered Vegetation Classification")
+            
             col1, col2 = st.columns(2)
             
             with col1:
-                st.subheader("NDVI Analysis")
+                if st.button("🔍 Analyze Vegetation Types"):
+                    with st.spinner("Classifying vegetation using AI models..."):
+                        try:
+                            # Create features for ML classification
+                            features = ml_classifier.create_training_features(
+                                st.session_state.satellite_data,
+                                getattr(st.session_state, 'lidar_data', None)
+                            )
+                            
+                            # Classify vegetation
+                            vegetation_result = ml_classifier.classify_vegetation(features)
+                            risk_result = ml_classifier.predict_fire_risk(features)
+                            
+                            # Store results
+                            st.session_state.ml_vegetation_result = vegetation_result
+                            st.session_state.ml_risk_result = risk_result
+                            
+                            st.success("✅ AI analysis complete!")
+                            
+                        except Exception as e:
+                            st.error(f"❌ AI analysis failed: {str(e)}")
+            
+            with col2:
+                if st.button("🗺️ Cluster Vegetation Areas"):
+                    with st.spinner("Identifying vegetation patterns..."):
+                        try:
+                            features = ml_classifier.create_training_features(
+                                st.session_state.satellite_data,
+                                getattr(st.session_state, 'lidar_data', None)
+                            )
+                            
+                            # Create multiple feature samples for clustering by simulating spatial variation
+                            n_samples = 50
+                            features_list = []
+                            
+                            base_satellite = st.session_state.satellite_data.copy()
+                            base_lidar = getattr(st.session_state, 'lidar_data', None)
+                            
+                            for i in range(n_samples):
+                                # Add small variations to simulate different locations/patches
+                                varied_satellite = base_satellite.copy()
+                                if 'ndvi_values' in varied_satellite:
+                                    # Add realistic variation to NDVI values
+                                    ndvi_array = np.array(varied_satellite['ndvi_values'])
+                                    variation = np.random.normal(0, 0.05, len(ndvi_array))
+                                    varied_ndvi = np.clip(ndvi_array + variation, -1, 1)
+                                    varied_satellite['ndvi_values'] = varied_ndvi.tolist()
+                                
+                                varied_lidar = None
+                                if base_lidar and 'height_values' in base_lidar:
+                                    varied_lidar = base_lidar.copy()
+                                    height_array = np.array(base_lidar['height_values'])
+                                    height_variation = np.random.normal(0, 1.0, len(height_array))
+                                    varied_heights = np.clip(height_array + height_variation, 0, 50)
+                                    varied_lidar['height_values'] = varied_heights.tolist()
+                                
+                                sample_features = ml_classifier.create_training_features(
+                                    varied_satellite, varied_lidar
+                                )
+                                features_list.append(sample_features)
+                            
+                            all_features = pd.concat(features_list, ignore_index=True)
+                            clustering_result = ml_classifier.cluster_vegetation_areas(all_features)
+                            
+                            st.session_state.clustering_result = clustering_result
+                            st.success("✅ Vegetation clustering complete!")
+                            
+                        except Exception as e:
+                            st.error(f"❌ Clustering analysis failed: {str(e)}")
+            
+            # Display ML results
+            if hasattr(st.session_state, 'ml_vegetation_result'):
+                st.subheader("🎯 Vegetation Classification Results")
                 
+                col1, col2, col3 = st.columns(3)
+                
+                result = st.session_state.ml_vegetation_result
+                
+                with col1:
+                    st.metric(
+                        "Detected Vegetation Type", 
+                        result['predicted_vegetation']
+                    )
+                    st.metric(
+                        "Classification Confidence", 
+                        f"{result['confidence']:.1%}"
+                    )
+                
+                with col2:
+                    # Vegetation type probabilities
+                    prob_data = result['probabilities']
+                    fig = px.bar(
+                        x=list(prob_data.keys()),
+                        y=list(prob_data.values()),
+                        title="Vegetation Type Probabilities",
+                        labels={'x': 'Vegetation Type', 'y': 'Probability'}
+                    )
+                    fig.update_layout(xaxis_tickangle=-45)
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col3:
+                    if hasattr(st.session_state, 'ml_risk_result'):
+                        risk_result = st.session_state.ml_risk_result
+                        st.metric(
+                            "AI Risk Assessment", 
+                            risk_result['predicted_risk']
+                        )
+                        st.metric(
+                            "Risk Score", 
+                            f"{risk_result['risk_score']:.1%}"
+                        )
+            
+            # Display clustering results
+            if hasattr(st.session_state, 'clustering_result'):
+                st.subheader("🔍 Vegetation Pattern Analysis")
+                
+                clustering = st.session_state.clustering_result
+                
+                if 'cluster_analysis' in clustering:
+                    cluster_data = clustering['cluster_analysis']
+                    
+                    # Create cluster summary
+                    cluster_df = pd.DataFrame([
+                        {
+                            'Cluster': cluster_id,
+                            'Size': info['size'],
+                            'Avg NDVI': f"{info['avg_ndvi']:.3f}",
+                            'Avg Height': f"{info['avg_height']:.1f}m",
+                            'Type': info['characteristics']
+                        }
+                        for cluster_id, info in cluster_data.items()
+                    ])
+                    
+                    st.dataframe(cluster_df, use_container_width=True)
+            
+            # Traditional NDVI analysis
+            st.subheader("📊 Traditional NDVI Analysis")
+            col1, col2 = st.columns(2)
+            
+            with col1:
                 # NDVI statistics
                 if hasattr(st.session_state, 'analysis_results'):
                     ndvi_stats = st.session_state.analysis_results.get('ndvi_stats', {})
@@ -366,7 +522,7 @@ if st.session_state.data_loaded:
                     st.metric("Vegetation Coverage", f"{ndvi_stats.get('vegetation_percentage', 0):.1f}%")
                 
                 # NDVI histogram
-                if 'ndvi_histogram' in st.session_state.analysis_results:
+                if hasattr(st.session_state, 'analysis_results') and 'ndvi_histogram' in st.session_state.analysis_results:
                     fig = px.bar(
                         x=st.session_state.analysis_results['ndvi_histogram']['bins'],
                         y=st.session_state.analysis_results['ndvi_histogram']['counts'],
@@ -375,8 +531,6 @@ if st.session_state.data_loaded:
                     st.plotly_chart(fig, use_container_width=True)
             
             with col2:
-                st.subheader("Vegetation Health Index")
-                
                 # Health categories
                 if hasattr(st.session_state, 'analysis_results'):
                     health_data = st.session_state.analysis_results.get('vegetation_health', {})
