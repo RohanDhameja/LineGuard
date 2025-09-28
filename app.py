@@ -21,6 +21,7 @@ from utils.visualization import Visualizer
 from utils.database import DatabaseManager
 from utils.ml_models import VegetationClassifier
 from utils.weather_service import WeatherService
+from utils.monitoring_system import VegetationMonitoringSystem
 
 # Page configuration
 st.set_page_config(
@@ -54,6 +55,13 @@ def initialize_components():
         st.warning(f"Database connection failed: {str(e)}. Some features may be limited.")
         db_manager = None
     
+    # Initialize monitoring system
+    monitoring_system = VegetationMonitoringSystem(
+        database_manager=db_manager,
+        weather_service=weather_service,
+        ml_classifier=ml_classifier
+    )
+    
     # Initialize ML models with synthetic training data
     try:
         if not hasattr(ml_classifier, 'vegetation_classifier') or ml_classifier.vegetation_classifier is None:
@@ -65,9 +73,9 @@ def initialize_components():
     except Exception as e:
         print(f"⚠️ ML model initialization failed: {str(e)}")
     
-    return data_loader, geospatial, risk_assessment, visualizer, db_manager, ml_classifier, weather_service
+    return data_loader, geospatial, risk_assessment, visualizer, db_manager, ml_classifier, weather_service, monitoring_system
 
-data_loader, geospatial, risk_assessment, visualizer, db_manager, ml_classifier, weather_service = initialize_components()
+data_loader, geospatial, risk_assessment, visualizer, db_manager, ml_classifier, weather_service, monitoring_system = initialize_components()
 
 # Main title and description
 st.title("🔥 Vegetation Detection Near Power Lines")
@@ -154,7 +162,7 @@ if st.session_state.data_loaded:
         "📊 Risk Dashboard", 
         "🌿 Vegetation Analysis", 
         "⚡ Power Line Analysis", 
-        "📈 Reports"
+        "🔍 Monitoring System"
     ])
     
     with tab1:
@@ -854,6 +862,202 @@ if st.session_state.data_loaded:
         
         else:
             st.info("Complete the risk analysis to generate reports.")
+    
+    with tab5:
+        st.subheader("🔍 Automated Monitoring System")
+        
+        # Monitoring system controls
+        st.subheader("🎛️ System Controls")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("🚀 Start Monitoring"):
+                monitoring_system.start_monitoring()
+                st.success("✅ Monitoring system started!")
+                st.rerun()
+        
+        with col2:
+            if st.button("🛑 Stop Monitoring"):
+                monitoring_system.stop_monitoring()
+                st.info("🛑 Monitoring system stopped")
+                st.rerun()
+        
+        with col3:
+            if st.button("🔄 Refresh Dashboard"):
+                st.rerun()
+        
+        # Get monitoring dashboard data
+        dashboard_data = monitoring_system.get_monitoring_dashboard_data()
+        
+        # System status overview
+        st.subheader("📊 System Status")
+        col1, col2, col3, col4 = st.columns(4)
+        
+        status = dashboard_data['system_status']
+        
+        with col1:
+            status_color = "green" if status['status'] == 'RUNNING' else "red"
+            st.markdown(f"**Status:** :{status_color}[{status['status']}]")
+            st.metric("System Health", status['system_health'])
+        
+        with col2:
+            st.metric("Active Alerts", status['alerts_count'])
+            st.metric("Running Tasks", status['tasks_running'])
+        
+        with col3:
+            last_update = datetime.fromisoformat(status['last_update']) if isinstance(status['last_update'], str) else status['last_update']
+            st.metric("Last Update", last_update.strftime("%H:%M:%S"))
+        
+        with col4:
+            alert_summary = dashboard_data['alert_summary']
+            st.metric("Critical Alerts", alert_summary['critical'])
+            st.metric("Warnings", alert_summary['warning'])
+        
+        # Active alerts section
+        st.subheader("🚨 Active Alerts")
+        
+        active_alerts = dashboard_data['active_alerts']
+        if active_alerts:
+            for alert in active_alerts:
+                alert_time = datetime.fromisoformat(alert['timestamp']) if isinstance(alert['timestamp'], str) else alert['timestamp']
+                
+                # Color code by severity
+                if alert['severity'] == 'CRITICAL':
+                    st.error(f"🔥 **{alert['title']}** - {alert_time.strftime('%H:%M:%S')}")
+                elif alert['severity'] == 'WARNING':
+                    st.warning(f"⚠️ **{alert['title']}** - {alert_time.strftime('%H:%M:%S')}")
+                else:
+                    st.info(f"ℹ️ **{alert['title']}** - {alert_time.strftime('%H:%M:%S')}")
+                
+                st.write(f"📍 **Location:** {alert['location'].get('name', 'Unknown')}")
+                st.write(f"📝 **Description:** {alert['description']}")
+                
+                # Recommended actions
+                if alert.get('recommended_actions'):
+                    st.write("**Recommended Actions:**")
+                    for i, action in enumerate(alert['recommended_actions'], 1):
+                        st.write(f"   {i}. {action}")
+                
+                # Alert actions
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button(f"✅ Acknowledge", key=f"ack_{alert['id']}"):
+                        monitoring_system.acknowledge_alert(alert['id'])
+                        st.success("Alert acknowledged")
+                        st.rerun()
+                
+                with col2:
+                    if st.button(f"✓ Resolve", key=f"resolve_{alert['id']}"):
+                        monitoring_system.resolve_alert(alert['id'])
+                        st.success("Alert resolved")
+                        st.rerun()
+                
+                st.markdown("---")
+        else:
+            st.success("🎉 No active alerts - All systems operating normally!")
+        
+        # Monitoring tasks status
+        st.subheader("⚙️ Monitoring Tasks")
+        
+        tasks = dashboard_data['monitoring_tasks']
+        if tasks:
+            task_df_data = []
+            for task_id, task in tasks.items():
+                last_run = "Never" if not task['last_run'] else datetime.fromisoformat(task['last_run']).strftime('%H:%M:%S')
+                next_run = datetime.fromisoformat(task['next_run']).strftime('%H:%M:%S')
+                
+                task_df_data.append({
+                    'Task': task['name'],
+                    'Status': '✅ Enabled' if task['enabled'] else '❌ Disabled',
+                    'Interval (min)': task['interval_minutes'],
+                    'Last Run': last_run,
+                    'Next Run': next_run
+                })
+            
+            task_df = pd.DataFrame(task_df_data)
+            st.dataframe(task_df, hide_index=True, use_container_width=True)
+        
+        # Alert statistics
+        st.subheader("📊 Alert Statistics")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Alert severity distribution
+            severity_counts = {}
+            for alert in dashboard_data['recent_alerts']:
+                severity = alert['severity']
+                severity_counts[severity] = severity_counts.get(severity, 0) + 1
+            
+            if severity_counts:
+                fig = px.pie(
+                    values=list(severity_counts.values()),
+                    names=list(severity_counts.keys()),
+                    title="Alert Severity Distribution",
+                    color_discrete_map={
+                        'INFO': 'blue',
+                        'WARNING': 'orange',
+                        'CRITICAL': 'red',
+                        'EMERGENCY': 'darkred'
+                    }
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No alerts to display in chart")
+        
+        with col2:
+            # Daily alert trend (simulated)
+            dates = [(datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7, 0, -1)]
+            daily_counts = [np.random.poisson(3) for _ in dates]  # Simulated daily alert counts
+            
+            fig = px.bar(
+                x=dates,
+                y=daily_counts,
+                title="Daily Alert Trend (Last 7 Days)",
+                labels={'x': 'Date', 'y': 'Number of Alerts'}
+            )
+            fig.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # System configuration
+        with st.expander("⚙️ System Configuration"):
+            st.write("**Current Alert Thresholds:**")
+            
+            threshold_data = []
+            for param, threshold in monitoring_system.alert_thresholds.items():
+                threshold_data.append({
+                    'Parameter': param.replace('_', ' ').title(),
+                    'Warning Value': threshold.warning_value,
+                    'Critical Value': threshold.critical_value,
+                    'Operator': threshold.operator,
+                    'Enabled': '✅' if threshold.enabled else '❌',
+                    'Description': threshold.description
+                })
+            
+            threshold_df = pd.DataFrame(threshold_data)
+            st.dataframe(threshold_df, hide_index=True, use_container_width=True)
+            
+            st.info("""
+            **Monitoring System Features:**
+            
+            🔄 **Automated Tasks:**
+            - Weather data updates every hour
+            - Vegetation analysis every 6 hours  
+            - Risk assessment every 3 hours
+            - System health checks every 30 minutes
+            
+            🚨 **Alert System:**
+            - Real-time threshold monitoring
+            - Multi-level severity classification
+            - Automated recommendations
+            - Historical alert tracking
+            
+            📊 **Dashboard:**
+            - Live system status monitoring
+            - Interactive alert management
+            - Performance analytics
+            - Configuration management
+            """)
 
 else:
     # Welcome screen
