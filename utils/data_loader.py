@@ -66,15 +66,12 @@ class DataLoader:
                         # Try with high volume endpoint
                         ee.Initialize(opt_url='https://earthengine-highvolume.googleapis.com')
                         print("✅ Earth Engine initialized with high-volume endpoint")
-                    except Exception:
-                        # Try authenticating first
-                        try:
-                            ee.Authenticate()
-                            ee.Initialize()
-                            print("✅ Earth Engine initialized after authentication")
-                        except Exception as final_error:
-                            print(f"All Earth Engine initialization methods failed: {final_error}")
-                            return False
+                    except Exception as auth_needed:
+                        # Skip interactive authentication in server environments
+                        print(f"⚠️ Earth Engine requires authentication: {auth_needed}")
+                        print("ℹ️  Skipping interactive authentication in server environment")
+                        print("ℹ️  Using synthetic data for demonstration")
+                        return False
             
             # Test the connection
             try:
