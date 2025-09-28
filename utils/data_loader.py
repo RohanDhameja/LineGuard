@@ -31,13 +31,24 @@ class DataLoader:
             # Try to initialize with service account if available
             service_account = os.getenv('GOOGLE_SERVICE_ACCOUNT_EMAIL')
             if service_account:
-                credentials = ee.ServiceAccountCredentials(
-                    service_account, 
-                    os.getenv('GOOGLE_SERVICE_ACCOUNT_KEY_PATH', 'service-account-key.json')
-                )
-                ee.Initialize(credentials)
+                key_data = os.getenv('GOOGLE_SERVICE_ACCOUNT_KEY')
+                if key_data:
+                    # Create temporary file for service account key
+                    import tempfile
+                    import json
+                    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                        f.write(key_data)
+                        temp_key_path = f.name
+                    
+                    credentials = ee.ServiceAccountCredentials(service_account, temp_key_path)
+                    ee.Initialize(credentials)
+                    
+                    # Clean up temporary file
+                    os.unlink(temp_key_path)
+                else:
+                    ee.Initialize()
             else:
-                # Fall back to user authentication
+                # Fall back to user authentication or default
                 ee.Initialize()
             
             self.ee_initialized = True
@@ -96,10 +107,12 @@ class DataLoader:
             ).getInfo()
             
             # Sample NDVI values for analysis
-            sample_points = region.sample(region=region, scale=30, numPixels=1000)
-            ndvi_samples = ndvi.sampleRegions(
-                collection=sample_points,
-                scale=10
+            ndvi_samples = ndvi.sample(
+                region=region,
+                scale=10,
+                numPixels=1000,
+                seed=42,
+                dropNulls=True
             ).getInfo()
             
             ndvi_values = [feature['properties']['NDVI'] for feature in ndvi_samples['features'] 
