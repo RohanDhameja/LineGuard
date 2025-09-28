@@ -20,6 +20,7 @@ from utils.risk_assessment import RiskAssessment
 from utils.visualization import Visualizer
 from utils.database import DatabaseManager
 from utils.ml_models import VegetationClassifier
+from utils.weather_service import WeatherService
 
 # Page configuration
 st.set_page_config(
@@ -45,6 +46,7 @@ def initialize_components():
     risk_assessment = RiskAssessment()
     visualizer = Visualizer()
     ml_classifier = VegetationClassifier()
+    weather_service = WeatherService()
     
     try:
         db_manager = DatabaseManager()
@@ -63,9 +65,9 @@ def initialize_components():
     except Exception as e:
         print(f"⚠️ ML model initialization failed: {str(e)}")
     
-    return data_loader, geospatial, risk_assessment, visualizer, db_manager, ml_classifier
+    return data_loader, geospatial, risk_assessment, visualizer, db_manager, ml_classifier, weather_service
 
-data_loader, geospatial, risk_assessment, visualizer, db_manager, ml_classifier = initialize_components()
+data_loader, geospatial, risk_assessment, visualizer, db_manager, ml_classifier, weather_service = initialize_components()
 
 # Main title and description
 st.title("🔥 Vegetation Detection Near Power Lines")
@@ -362,6 +364,132 @@ if st.session_state.data_loaded:
                     )
                 else:
                     st.info("No high-priority areas identified.")
+            
+            # Weather-Enhanced Risk Assessment
+            st.subheader("🌡️ Weather-Enhanced Risk Assessment")
+            
+            if hasattr(st.session_state, 'selected_location') and st.session_state.selected_location:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if st.button("🌤️ Get Current Weather & Fire Risk"):
+                        with st.spinner("Fetching weather data and calculating fire risk..."):
+                            try:
+                                lat = st.session_state.selected_location['lat']
+                                lon = st.session_state.selected_location['lng']
+                                current_weather = weather_service.get_current_weather(lat, lon)
+                                fire_index = weather_service.calculate_fire_weather_index(current_weather)
+                                
+                                st.session_state.current_weather = current_weather
+                                st.session_state.fire_weather_index = fire_index
+                                
+                                st.success("✅ Weather-enhanced risk assessment complete!")
+                            except Exception as e:
+                                st.error(f"❌ Error fetching weather data: {str(e)}")
+                                st.info("Using synthetic weather data for demonstration.")
+                
+                with col2:
+                    if st.button("📊 Get Weather Forecast"):
+                        with st.spinner("Fetching weather forecast..."):
+                            try:
+                                lat = st.session_state.selected_location['lat']
+                                lon = st.session_state.selected_location['lng']
+                                forecast = weather_service.get_weather_forecast(lat, lon, 5)
+                                st.session_state.weather_forecast = forecast
+                                st.success("✅ Weather forecast loaded!")
+                            except Exception as e:
+                                st.error(f"❌ Error fetching weather forecast: {str(e)}")
+                                st.info("Using synthetic forecast data for demonstration.")
+                
+                # Display current weather and fire risk
+                if hasattr(st.session_state, 'current_weather') and hasattr(st.session_state, 'fire_weather_index'):
+                    st.subheader("🔥 Current Fire Weather Conditions")
+                    
+                    weather = st.session_state.current_weather
+                    fire_idx = st.session_state.fire_weather_index
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("Temperature", f"{weather['temperature']:.1f}°C")
+                        st.metric("Humidity", f"{weather['humidity']:.0f}%")
+                    
+                    with col2:
+                        st.metric("Wind Speed", f"{weather['wind_speed']:.1f} km/h")
+                        st.metric("Precipitation (24h)", f"{weather['precipitation_24h']:.1f} mm")
+                    
+                    with col3:
+                        danger_level = fire_idx.get('danger_level', 'Unknown')
+                        fwi_score = fire_idx.get('fire_weather_index', 0)
+                        
+                        st.metric("Fire Weather Index", f"{fwi_score:.1f}/100")
+                        
+                        # Color code the danger level
+                        if danger_level == 'Low':
+                            st.success(f"Danger Level: {danger_level}")
+                        elif danger_level == 'Moderate':
+                            st.warning(f"Danger Level: {danger_level}")
+                        elif danger_level == 'High':
+                            st.error(f"Danger Level: {danger_level}")
+                        else:
+                            st.error(f"⚠️ Danger Level: {danger_level}")
+                    
+                    with col4:
+                        st.metric("Visibility", f"{weather['visibility']:.1f} km")
+                        st.metric("Weather", weather['weather_condition'])
+                    
+                    # Fire safety recommendations
+                    if fire_idx.get('recommendations'):
+                        st.subheader("🚨 Fire Safety Recommendations")
+                        
+                        for i, recommendation in enumerate(fire_idx['recommendations'], 1):
+                            if i == 1 and 'CRITICAL' in recommendation:
+                                st.error(f"{i}. {recommendation}")
+                            elif 'alert' in recommendation.lower() or 'suspend' in recommendation.lower():
+                                st.warning(f"{i}. {recommendation}")
+                            else:
+                                st.info(f"{i}. {recommendation}")
+                
+                # Display weather forecast if available
+                if hasattr(st.session_state, 'weather_forecast') and 'daily_summary' in st.session_state.weather_forecast:
+                    st.subheader("📈 5-Day Fire Weather Forecast")
+                    
+                    forecast = st.session_state.weather_forecast
+                    daily_summary = forecast['daily_summary']
+                    
+                    if daily_summary:
+                        forecast_df = pd.DataFrame(daily_summary)
+                        
+                        # Fire weather index forecast chart
+                        fig = px.bar(
+                            forecast_df,
+                            x='date',
+                            y='fire_weather_index_max',
+                            title="Daily Maximum Fire Weather Index",
+                            color='fire_weather_index_max',
+                            color_continuous_scale=['green', 'yellow', 'orange', 'red'],
+                            labels={'fire_weather_index_max': 'Fire Weather Index'}
+                        )
+                        fig.update_layout(xaxis_tickangle=-45)
+                        st.plotly_chart(fig, use_container_width=True)
+                        
+                        # Forecast summary table
+                        forecast_display = forecast_df.copy()
+                        forecast_display['temp_range'] = forecast_display.apply(
+                            lambda row: f"{row['temp_min']:.0f}°C - {row['temp_max']:.0f}°C", axis=1
+                        )
+                        forecast_display = forecast_display[[
+                            'date', 'temp_range', 'humidity_avg', 'wind_max', 
+                            'precipitation_total', 'fire_weather_index_max'
+                        ]]
+                        forecast_display.columns = [
+                            'Date', 'Temperature', 'Humidity (%)', 'Wind (km/h)', 
+                            'Rain (mm)', 'Fire Index'
+                        ]
+                        
+                        st.dataframe(forecast_display, hide_index=True, use_container_width=True)
+            else:
+                st.info("Select a location on the map to access weather-enhanced risk assessment.")
     
     with tab3:
         st.subheader("🌿 Advanced Vegetation Analysis")

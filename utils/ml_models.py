@@ -156,9 +156,9 @@ class VegetationClassifier:
             X = training_data[feature_columns]
             y = training_data[target_column]
             
-            # Encode labels
+            # Encode labels (ensure string conversion)
             self.label_encoders['vegetation'] = LabelEncoder()
-            y_encoded = self.label_encoders['vegetation'].fit_transform(y)
+            y_encoded = self.label_encoders['vegetation'].fit_transform(y.astype(str))
             
             # Scale features
             self.scalers['vegetation'] = StandardScaler()
@@ -219,9 +219,9 @@ class VegetationClassifier:
             X = training_data[feature_columns]
             y = training_data[target_column]
             
-            # Encode labels
+            # Encode labels (ensure string conversion)
             self.label_encoders['risk'] = LabelEncoder()
-            y_encoded = self.label_encoders['risk'].fit_transform(y)
+            y_encoded = self.label_encoders['risk'].fit_transform(y.astype(str))
             
             # Scale features
             self.scalers['risk'] = StandardScaler()
@@ -470,54 +470,54 @@ class VegetationClassifier:
         
         for i in range(n_samples):
             # Generate base vegetation characteristics
-            vegetation_type = np.random.choice(self.model_metadata['vegetation_types'])
+            vegetation_type = str(np.random.choice(self.model_metadata['vegetation_types']))
             
             # Generate features based on vegetation type
             if vegetation_type == 'Trees_Coniferous':
-                ndvi_mean = np.random.normal(0.75, 0.1)
-                canopy_height = np.random.normal(20, 5)
-                risk_level = np.random.choice(['Low', 'Moderate'], p=[0.7, 0.3])
+                ndvi_mean = float(np.random.normal(0.75, 0.1))
+                canopy_height = float(np.random.normal(20, 5))
+                risk_level = str(np.random.choice(['Low', 'Moderate'], p=[0.7, 0.3]))
             elif vegetation_type == 'Trees_Deciduous':
-                ndvi_mean = np.random.normal(0.7, 0.12)
-                canopy_height = np.random.normal(15, 4)
-                risk_level = np.random.choice(['Low', 'Moderate', 'High'], p=[0.5, 0.4, 0.1])
+                ndvi_mean = float(np.random.normal(0.7, 0.12))
+                canopy_height = float(np.random.normal(15, 4))
+                risk_level = str(np.random.choice(['Low', 'Moderate', 'High'], p=[0.5, 0.4, 0.1]))
             elif vegetation_type == 'Shrubs':
-                ndvi_mean = np.random.normal(0.5, 0.15)
-                canopy_height = np.random.normal(3, 1)
-                risk_level = np.random.choice(['Moderate', 'High'], p=[0.6, 0.4])
+                ndvi_mean = float(np.random.normal(0.5, 0.15))
+                canopy_height = float(np.random.normal(3, 1))
+                risk_level = str(np.random.choice(['Moderate', 'High'], p=[0.6, 0.4]))
             elif vegetation_type == 'Grass':
-                ndvi_mean = np.random.normal(0.4, 0.1)
-                canopy_height = np.random.normal(0.5, 0.2)
-                risk_level = np.random.choice(['Moderate', 'High', 'Critical'], p=[0.5, 0.3, 0.2])
+                ndvi_mean = float(np.random.normal(0.4, 0.1))
+                canopy_height = float(np.random.normal(0.5, 0.2))
+                risk_level = str(np.random.choice(['Moderate', 'High', 'Critical'], p=[0.5, 0.3, 0.2]))
             else:  # Mixed_Vegetation
-                ndvi_mean = np.random.normal(0.6, 0.2)
-                canopy_height = np.random.normal(8, 4)
-                risk_level = np.random.choice(['Low', 'Moderate', 'High'], p=[0.3, 0.5, 0.2])
+                ndvi_mean = float(np.random.normal(0.6, 0.2))
+                canopy_height = float(np.random.normal(8, 4))
+                risk_level = str(np.random.choice(['Low', 'Moderate', 'High'], p=[0.3, 0.5, 0.2]))
             
             # Clip values to realistic ranges
-            ndvi_mean = np.clip(ndvi_mean, 0, 1)
-            canopy_height = np.clip(canopy_height, 0, 50)
+            ndvi_mean = float(np.clip(ndvi_mean, 0, 1))
+            canopy_height = float(np.clip(canopy_height, 0, 50))
             
-            # Generate additional features
+            # Generate additional features - ensure all are native Python types
             sample = {
                 'vegetation_type': vegetation_type,
                 'risk_level': risk_level,
                 'ndvi_mean': ndvi_mean,
-                'ndvi_std': np.random.uniform(0.05, 0.2),
-                'ndvi_max': min(1.0, ndvi_mean + np.random.uniform(0.1, 0.3)),
-                'ndvi_min': max(0.0, ndvi_mean - np.random.uniform(0.1, 0.3)),
-                'vegetation_fraction': np.clip(ndvi_mean + np.random.normal(0, 0.1), 0, 1),
-                'healthy_vegetation_fraction': np.clip(ndvi_mean - 0.2 + np.random.normal(0, 0.1), 0, 1),
+                'ndvi_std': float(np.random.uniform(0.05, 0.2)),
+                'ndvi_max': float(min(1.0, ndvi_mean + np.random.uniform(0.1, 0.3))),
+                'ndvi_min': float(max(0.0, ndvi_mean - np.random.uniform(0.1, 0.3))),
+                'vegetation_fraction': float(np.clip(ndvi_mean + np.random.normal(0, 0.1), 0, 1)),
+                'healthy_vegetation_fraction': float(np.clip(ndvi_mean - 0.2 + np.random.normal(0, 0.1), 0, 1)),
                 'canopy_height_mean': canopy_height,
-                'canopy_height_std': np.random.uniform(1, 5),
-                'canopy_height_max': canopy_height + np.random.uniform(2, 8),
-                'canopy_cover_density': np.random.uniform(0.3, 0.9),
-                'tall_vegetation_fraction': 1.0 if canopy_height > 10 else np.random.uniform(0, 0.3),
-                'temperature_avg': np.random.normal(22, 8),
-                'humidity_avg': np.random.uniform(30, 80),
-                'precipitation_mm': np.random.gamma(2, 50),
-                'wind_speed_ms': np.random.gamma(2, 2),
-                'seasonal_factor': np.random.uniform(0.5, 1.0)
+                'canopy_height_std': float(np.random.uniform(1, 5)),
+                'canopy_height_max': float(canopy_height + np.random.uniform(2, 8)),
+                'canopy_cover_density': float(np.random.uniform(0.3, 0.9)),
+                'tall_vegetation_fraction': float(1.0 if canopy_height > 10 else np.random.uniform(0, 0.3)),
+                'temperature_avg': float(np.random.normal(22, 8)),
+                'humidity_avg': float(np.random.uniform(30, 80)),
+                'precipitation_mm': float(np.random.gamma(2, 50)),
+                'wind_speed_ms': float(np.random.gamma(2, 2)),
+                'seasonal_factor': float(np.random.uniform(0.5, 1.0))
             }
             
             data.append(sample)
