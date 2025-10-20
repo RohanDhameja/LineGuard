@@ -1290,6 +1290,6 @@ else:
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #666; font-size: 0.8em;'>
-🔥 Vegetation Detection Near Power Lines | Built with Streamlit | Data: Sentinel-2, USGS 3DEP, CEC
+🔥 Vegetation Detection Near Power Lines | Data: Sentinel-2, USGS 3DEP, CEC
 </div>
 """, unsafe_allow_html=True)
