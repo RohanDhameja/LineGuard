@@ -474,5 +474,105 @@ def batch_risk_prediction():
         "predictions": predictions
     })
 
+# === Email Notification Endpoints ===
+
+# Initialize email notifier (will check environment variables)
+email_notifier = None
+try:
+    from utils.email_notifier import EmailNotifier
+    email_notifier = EmailNotifier()
+    if email_notifier.is_configured:
+        print("✅ Email notification system configured")
+    else:
+        print("⚠️  Email not configured. Set SMTP environment variables to enable.")
+except Exception as e:
+    print(f"⚠️  Email notifier not available: {e}")
+
+@app.route('/api/send_alert_email', methods=['POST'])
+def send_alert_email():
+    """Send email notification for high-risk zones"""
+    if not email_notifier or not email_notifier.is_configured:
+        return jsonify({
+            "status": "error",
+            "message": "Email notification system not configured. Please set SMTP environment variables."
+        }), 503
+    
+    data = request.get_json()
+    recipient_email = data.get('recipient_email')
+    alert_zones = data.get('alert_zones', [])
+    date_str = data.get('date')
+    
+    if not recipient_email:
+        return jsonify({
+            "status": "error",
+            "message": "Recipient email is required"
+        }), 400
+    
+    if not alert_zones:
+        return jsonify({
+            "status": "error",
+            "message": "No alert zones provided"
+        }), 400
+    
+    try:
+        result = email_notifier.send_alert_email(
+            recipient_email,
+            alert_zones,
+            date_str
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Failed to send email: {str(e)}"
+        }), 500
+
+@app.route('/api/send_weekly_summary', methods=['POST'])
+def send_weekly_summary():
+    """Send weekly summary email"""
+    if not email_notifier or not email_notifier.is_configured:
+        return jsonify({
+            "status": "error",
+            "message": "Email notification system not configured"
+        }), 503
+    
+    data = request.get_json()
+    recipient_email = data.get('recipient_email')
+    summary_data = data.get('summary_data', {})
+    
+    if not recipient_email:
+        return jsonify({
+            "status": "error",
+            "message": "Recipient email is required"
+        }), 400
+    
+    try:
+        result = email_notifier.send_weekly_summary(
+            recipient_email,
+            summary_data
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Failed to send summary: {str(e)}"
+        }), 500
+
+@app.route('/api/email_status')
+def email_status():
+    """Check if email notification system is configured"""
+    if not email_notifier:
+        return jsonify({
+            "configured": False,
+            "message": "Email notifier module not loaded"
+        })
+    
+    return jsonify({
+        "configured": email_notifier.is_configured,
+        "smtp_server": email_notifier.smtp_server if email_notifier.is_configured else None,
+        "sender_email": email_notifier.sender_email if email_notifier.is_configured else None,
+        "message": "Email system ready" if email_notifier.is_configured else "Configure SMTP environment variables"
+    })
+
 if __name__ == "__main__":
     app.run(debug=True)
