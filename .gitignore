@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation files (keep only README.md)
+DEMO_PRESENTATION.md
+HOW_TO_EXPLAIN_AI.md
+HOW_WE_BUILT_THE_MODEL.md
+IMPLEMENTATION_COMPLETE.md
+QUICK_START_SYNTHETIC_DATA.md
+QUICK_START.md
+SYNTHETIC_DATA_README.md
+SYNTHETIC_DATA_SUMMARY.md
+THE_PROBLEM_WE_SOLVE.md
+WHAT_WAS_BUILT.md
+
+# Test files
+test_*.py
+
+# Training artifacts (optional - comment out if you want to include them)
+fire_app_risk_model_training_results.png
+
+# Presentation (optional - keep if you want to share)
+# presentation.html
+

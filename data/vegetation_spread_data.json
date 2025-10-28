@@ -1,0 +1,562 @@
+{
+  "0": {
+    "zone_id": 0,
+    "initial_coverage": 51.090625827870944,
+    "spread_rate": 1.4103391020575344,
+    "weekly_data": [
+      {
+        "week": 0,
+        "coverage_percentage": 49.27102853675224,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.6300570624881385,
+        "new_area_covered_m2": 6.300570624881385
+      },
+      {
+        "week": 1,
+        "coverage_percentage": 54.32662772016618,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.7647674154574439,
+        "new_area_covered_m2": 7.647674154574439
+      },
+      {
+        "week": 2,
+        "coverage_percentage": 52.94723463839327,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.7820093466550678,
+        "new_area_covered_m2": 7.820093466550678
+      },
+      {
+        "week": 3,
+        "coverage_percentage": 55.72483691981234,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.7859143444638214,
+        "new_area_covered_m2": 7.859143444638214
+      },
+      {
+        "week": 4,
+        "coverage_percentage": 58.68872187535452,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.6854855983138647,
+        "new_area_covered_m2": 6.854855983138647
+      },
+      {
+        "week": 5,
+        "coverage_percentage": 59.493624279291595,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.651283390189771,
+        "new_area_covered_m2": 6.51283390189771
+      },
+      {
+        "week": 6,
+        "coverage_percentage": 60.875230511218646,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.7966236036254324,
+        "new_area_covered_m2": 7.966236036254324
+      },
+      {
+        "week": 7,
+        "coverage_percentage": 62.26782232544955,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.7653234884547422,
+        "new_area_covered_m2": 7.653234884547421
+      }
+    ],
+    "spread_pattern": "uniform",
+    "environmental_factors": {
+      "soil_moisture": 0.5148889614980765,
+      "sun_exposure": 0.6081620115182768,
+      "wind_direction": "N",
+      "slope_direction": "E"
+    }
+  },
+  "1": {
+    "zone_id": 1,
+    "initial_coverage": 63.89096289721364,
+    "spread_rate": 1.0250315008602682,
+    "weekly_data": [
+      {
+        "week": 0,
+        "coverage_percentage": 62.931896369019746,
+        "spread_direction": "NE",
+        "spread_velocity_m_per_week": 0.611782905591479,
+        "new_area_covered_m2": 6.11782905591479
+      },
+      {
+        "week": 1,
+        "coverage_percentage": 66.50573899025872,
+        "spread_direction": "SW",
+        "spread_velocity_m_per_week": 0.5051919000732581,
+        "new_area_covered_m2": 5.051919000732581
+      },
+      {
+        "week": 2,
+        "coverage_percentage": 66.43277543067465,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.46710762540139705,
+        "new_area_covered_m2": 4.67107625401397
+      },
+      {
+        "week": 3,
+        "coverage_percentage": 66.87276471311593,
+        "spread_direction": "E",
+        "spread_velocity_m_per_week": 0.4213910831367814,
+        "new_area_covered_m2": 4.213910831367814
+      },
+      {
+        "week": 4,
+        "coverage_percentage": 69.39986303404275,
+        "spread_direction": "E",
+        "spread_velocity_m_per_week": 0.598833648093932,
+        "new_area_covered_m2": 5.988336480939321
+      },
+      {
+        "week": 5,
+        "coverage_percentage": 69.95697101960879,
+        "spread_direction": "E",
+        "spread_velocity_m_per_week": 0.46879394254563944,
+        "new_area_covered_m2": 4.687939425456395
+      },
+      {
+        "week": 6,
+        "coverage_percentage": 69.05174827821878,
+        "spread_direction": "E",
+        "spread_velocity_m_per_week": 0.6049401449485441,
+        "new_area_covered_m2": 6.0494014494854405
+      },
+      {
+        "week": 7,
+        "coverage_percentage": 69.50405884345332,
+        "spread_direction": "E",
+        "spread_velocity_m_per_week": 0.5914117366237476,
+        "new_area_covered_m2": 5.914117366237476
+      }
+    ],
+    "spread_pattern": "clustered",
+    "environmental_factors": {
+      "soil_moisture": 0.6957376675725241,
+      "sun_exposure": 0.5307585131196175,
+      "wind_direction": "S",
+      "slope_direction": "flat"
+    }
+  },
+  "2": {
+    "zone_id": 2,
+    "initial_coverage": 76.2605487777832,
+    "spread_rate": 1.071318941919574,
+    "weekly_data": [
+      {
+        "week": 0,
+        "coverage_percentage": 76.90899681820946,
+        "spread_direction": "SW",
+        "spread_velocity_m_per_week": 0.5824414547505274,
+        "new_area_covered_m2": 5.824414547505274
+      },
+      {
+        "week": 1,
+        "coverage_percentage": 77.41690896842444,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 0.6092916317700965,
+        "new_area_covered_m2": 6.092916317700965
+      },
+      {
+        "week": 2,
+        "coverage_percentage": 77.38432879064368,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 0.5024612467088346,
+        "new_area_covered_m2": 5.024612467088346
+      },
+      {
+        "week": 3,
+        "coverage_percentage": 78.429265728746,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 0.6216775410617348,
+        "new_area_covered_m2": 6.216775410617348
+      },
+      {
+        "week": 4,
+        "coverage_percentage": 78.96916092077583,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 0.6119868975138572,
+        "new_area_covered_m2": 6.119868975138571
+      },
+      {
+        "week": 5,
+        "coverage_percentage": 83.4624046401207,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 0.5287534727137838,
+        "new_area_covered_m2": 5.287534727137838
+      },
+      {
+        "week": 6,
+        "coverage_percentage": 84.20474835021317,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 0.43588349325580894,
+        "new_area_covered_m2": 4.358834932558089
+      },
+      {
+        "week": 7,
+        "coverage_percentage": 83.98450831137924,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 0.586986631716774,
+        "new_area_covered_m2": 5.86986631716774
+      }
+    ],
+    "spread_pattern": "linear",
+    "environmental_factors": {
+      "soil_moisture": 0.329344165348954,
+      "sun_exposure": 0.5965664322936466,
+      "wind_direction": "S",
+      "slope_direction": "E"
+    }
+  },
+  "3": {
+    "zone_id": 3,
+    "initial_coverage": 79.24744712109694,
+    "spread_rate": 1.1318135270166683,
+    "weekly_data": [
+      {
+        "week": 0,
+        "coverage_percentage": 78.28666144535357,
+        "spread_direction": "W",
+        "spread_velocity_m_per_week": 0.6218758425385629,
+        "new_area_covered_m2": 6.218758425385628
+      },
+      {
+        "week": 1,
+        "coverage_percentage": 78.80718320342145,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.6181123440087397,
+        "new_area_covered_m2": 6.181123440087397
+      },
+      {
+        "week": 2,
+        "coverage_percentage": 81.67614048983472,
+        "spread_direction": "W",
+        "spread_velocity_m_per_week": 0.5924311421351237,
+        "new_area_covered_m2": 5.924311421351237
+      },
+      {
+        "week": 3,
+        "coverage_percentage": 84.37100012418702,
+        "spread_direction": "W",
+        "spread_velocity_m_per_week": 0.48640870910647,
+        "new_area_covered_m2": 4.8640870910647
+      },
+      {
+        "week": 4,
+        "coverage_percentage": 85.52361517810941,
+        "spread_direction": "W",
+        "spread_velocity_m_per_week": 0.5260994768976974,
+        "new_area_covered_m2": 5.260994768976975
+      },
+      {
+        "week": 5,
+        "coverage_percentage": 85.73920311076141,
+        "spread_direction": "W",
+        "spread_velocity_m_per_week": 0.4793768838020885,
+        "new_area_covered_m2": 4.793768838020885
+      },
+      {
+        "week": 6,
+        "coverage_percentage": 86.36701012390203,
+        "spread_direction": "NW",
+        "spread_velocity_m_per_week": 0.4750551702708367,
+        "new_area_covered_m2": 4.750551702708367
+      },
+      {
+        "week": 7,
+        "coverage_percentage": 88.65628903482313,
+        "spread_direction": "SW",
+        "spread_velocity_m_per_week": 0.6606045573438135,
+        "new_area_covered_m2": 6.606045573438135
+      }
+    ],
+    "spread_pattern": "radial",
+    "environmental_factors": {
+      "soil_moisture": 0.6844389276428458,
+      "sun_exposure": 0.8748259158714624,
+      "wind_direction": "E",
+      "slope_direction": "W"
+    }
+  },
+  "4": {
+    "zone_id": 4,
+    "initial_coverage": 70.3305278371609,
+    "spread_rate": 0.5245869164588015,
+    "weekly_data": [
+      {
+        "week": 0,
+        "coverage_percentage": 68.4190220432769,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.3163749417909594,
+        "new_area_covered_m2": 3.1637494179095937
+      },
+      {
+        "week": 1,
+        "coverage_percentage": 71.58829626004572,
+        "spread_direction": "W",
+        "spread_velocity_m_per_week": 0.2514739995047504,
+        "new_area_covered_m2": 2.514739995047504
+      },
+      {
+        "week": 2,
+        "coverage_percentage": 70.47420833520516,
+        "spread_direction": "NW",
+        "spread_velocity_m_per_week": 0.32125536797938664,
+        "new_area_covered_m2": 3.2125536797938663
+      },
+      {
+        "week": 3,
+        "coverage_percentage": 72.67901748966327,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.20644738078715283,
+        "new_area_covered_m2": 2.0644738078715283
+      },
+      {
+        "week": 4,
+        "coverage_percentage": 70.75839968545948,
+        "spread_direction": "NE",
+        "spread_velocity_m_per_week": 0.21694536362904263,
+        "new_area_covered_m2": 2.1694536362904264
+      },
+      {
+        "week": 5,
+        "coverage_percentage": 74.75691666845655,
+        "spread_direction": "NE",
+        "spread_velocity_m_per_week": 0.1925050365855808,
+        "new_area_covered_m2": 1.925050365855808
+      },
+      {
+        "week": 6,
+        "coverage_percentage": 73.20738854008411,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.28999864776221784,
+        "new_area_covered_m2": 2.8999864776221784
+      },
+      {
+        "week": 7,
+        "coverage_percentage": 73.59301384422369,
+        "spread_direction": "N",
+        "spread_velocity_m_per_week": 0.21713649869913476,
+        "new_area_covered_m2": 2.171364986991348
+      }
+    ],
+    "spread_pattern": "uniform",
+    "environmental_factors": {
+      "soil_moisture": 0.6919888239799141,
+      "sun_exposure": 0.7046670031575215,
+      "wind_direction": "SE",
+      "slope_direction": "S"
+    }
+  },
+  "5": {
+    "zone_id": 5,
+    "initial_coverage": 48.52418816100333,
+    "spread_rate": 0.5311340828845114,
+    "weekly_data": [
+      {
+        "week": 0,
+        "coverage_percentage": 49.13085546250687,
+        "spread_direction": "E",
+        "spread_velocity_m_per_week": 0.2602090227805671,
+        "new_area_covered_m2": 2.6020902278056712
+      },
+      {
+        "week": 1,
+        "coverage_percentage": 50.92809595554673,
+        "spread_direction": "E",
+        "spread_velocity_m_per_week": 0.2026721445828799,
+        "new_area_covered_m2": 2.026721445828799
+      },
+      {
+        "week": 2,
+        "coverage_percentage": 51.060948998594796,
+        "spread_direction": "E",
+        "spread_velocity_m_per_week": 0.33452368706563324,
+        "new_area_covered_m2": 3.3452368706563322
+      },
+      {
+        "week": 3,
+        "coverage_percentage": 51.16168637342886,
+        "spread_direction": "E",
+        "spread_velocity_m_per_week": 0.29081110576853875,
+        "new_area_covered_m2": 2.9081110576853875
+      },
+      {
+        "week": 4,
+        "coverage_percentage": 49.17370400327093,
+        "spread_direction": "SE",
+        "spread_velocity_m_per_week": 0.2618715117447657,
+        "new_area_covered_m2": 2.618715117447657
+      },
+      {
+        "week": 5,
+        "coverage_percentage": 49.649091331275464,
+        "spread_direction": "E",
+        "spread_velocity_m_per_week": 0.19060419988276578,
+        "new_area_covered_m2": 1.9060419988276578
+      },
+      {
+        "week": 6,
+        "coverage_percentage": 52.45325380722628,
+        "spread_direction": "NE",
+        "spread_velocity_m_per_week": 0.26388595079054306,
+        "new_area_covered_m2": 2.6388595079054307
+      },
+      {
+        "week": 7,
+        "coverage_percentage": 50.49896248949545,
+        "spread_direction": "E",
+        "spread_velocity_m_per_week": 0.28196132182513545,
+        "new_area_covered_m2": 2.8196132182513542
+      }
+    ],
+    "spread_pattern": "clustered",
+    "environmental_factors": {
+      "soil_moisture": 0.33449670221754885,
+      "sun_exposure": 0.898779550318594,
+      "wind_direction": "E",
+      "slope_direction": "flat"
+    }
+  },
+  "6": {
+    "zone_id": 6,
+    "initial_coverage": 45.98322570670263,
+    "spread_rate": 2.1968978949537155,
+    "weekly_data": [
+      {
+        "week": 0,
+        "coverage_percentage": 46.70505221213993,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 1.1428264730622448,
+        "new_area_covered_m2": 11.428264730622448
+      },
+      {
+        "week": 1,
+        "coverage_percentage": 48.80805903191432,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 1.1498608009991025,
+        "new_area_covered_m2": 11.498608009991024
+      },
+      {
+        "week": 2,
+        "coverage_percentage": 52.18761604876493,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 1.1482812752971143,
+        "new_area_covered_m2": 11.482812752971142
+      },
+      {
+        "week": 3,
+        "coverage_percentage": 51.157607687704356,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 1.019007428375391,
+        "new_area_covered_m2": 10.190074283753908
+      },
+      {
+        "week": 4,
+        "coverage_percentage": 55.05443529389416,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 1.0405188634606315,
+        "new_area_covered_m2": 10.405188634606315
+      },
+      {
+        "week": 5,
+        "coverage_percentage": 56.35178145205057,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 1.153609894635449,
+        "new_area_covered_m2": 11.536098946354489
+      },
+      {
+        "week": 6,
+        "coverage_percentage": 60.929563093354474,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 1.1749556446407778,
+        "new_area_covered_m2": 11.749556446407778
+      },
+      {
+        "week": 7,
+        "coverage_percentage": 59.69154510914033,
+        "spread_direction": "S",
+        "spread_velocity_m_per_week": 1.1633517568562244,
+        "new_area_covered_m2": 11.633517568562244
+      }
+    ],
+    "spread_pattern": "linear",
+    "environmental_factors": {
+      "soil_moisture": 0.3789006754641357,
+      "sun_exposure": 0.6610473511096677,
+      "wind_direction": "SW",
+      "slope_direction": "S"
+    }
+  },
+  "7": {
+    "zone_id": 7,
+    "initial_coverage": 67.57859876549063,
+    "spread_rate": 2.7008800486636244,
+    "weekly_data": [
+      {
+        "week": 0,
+        "coverage_percentage": 66.37919974246986,
+        "spread_direction": "NW",
+        "spread_velocity_m_per_week": 1.2567572532969407,
+        "new_area_covered_m2": 12.567572532969407
+      },
+      {
+        "week": 1,
+        "coverage_percentage": 72.02432779912901,
+        "spread_direction": "W",
+        "spread_velocity_m_per_week": 1.2608342810621067,
+        "new_area_covered_m2": 12.608342810621068
+      },
+      {
+        "week": 2,
+        "coverage_percentage": 73.14554420402216,
+        "spread_direction": "W",
+        "spread_velocity_m_per_week": 1.3932574107582978,
+        "new_area_covered_m2": 13.932574107582978
+      },
+      {
+        "week": 3,
+        "coverage_percentage": 76.88815124376067,
+        "spread_direction": "W",
+        "spread_velocity_m_per_week": 1.3183300628403734,
+        "new_area_covered_m2": 13.183300628403734
+      },
+      {
+        "week": 4,
+        "coverage_percentage": 79.64141941513117,
+        "spread_direction": "NW",
+        "spread_velocity_m_per_week": 1.3409036812354722,
+        "new_area_covered_m2": 13.409036812354723
+      },
+      {
+        "week": 5,
+        "coverage_percentage": 81.65730978959485,
+        "spread_direction": "W",
+        "spread_velocity_m_per_week": 1.355720556519035,
+        "new_area_covered_m2": 13.55720556519035
+      },
+      {
+        "week": 6,
+        "coverage_percentage": 84.7102371444937,
+        "spread_direction": "W",
+        "spread_velocity_m_per_week": 1.4247967376502526,
+        "new_area_covered_m2": 14.247967376502526
+      },
+      {
+        "week": 7,
+        "coverage_percentage": 85.36161505556818,
+        "spread_direction": "W",
+        "spread_velocity_m_per_week": 1.4456130754956384,
+        "new_area_covered_m2": 14.456130754956384
+      }
+    ],
+    "spread_pattern": "radial",
+    "environmental_factors": {
+      "soil_moisture": 0.36844789588555343,
+      "sun_exposure": 0.5910589578443497,
+      "wind_direction": "W",
+      "slope_direction": "flat"
+    }
+  }
+}

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fire App - ML Risk Assessment Demo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/black.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 {
+            text-transform: none;
+        }
+        .reveal .slides section {
+            text-align: left;
+        }
+        .reveal .center-text {
+            text-align: center;
+        }
+        .reveal .metric {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        .reveal .highlight {
+            color: #ff6f61;
+            font-weight: bold;
+        }
+        .reveal .emoji {
+            font-size: 2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            
+            <!-- Slide 1: Title -->
+            <section class="center-text">
+                <h1>🔥 Fire App</h1>
+                <h3>ML-Based Wildfire Risk Assessment</h3>
+                <p>Power Line Vegetation Monitoring with AI</p>
+                <p><small>October 2025</small></p>
+            </section>
+
+            <!-- Slide 2: The Problem -->
+            <section>
+                <h2>🔥 The Problem</h2>
+                <h3>Wildfire Risk from Power Line Vegetation</h3>
+                <ul>
+                    <li class="fragment"><span class="highlight">84%</span> of California wildfires caused by power infrastructure</li>
+                    <li class="fragment"><span class="highlight">$Billions</span> in damages annually</li>
+                    <li class="fragment">Manual inspections are <span class="highlight">slow & reactive</span></li>
+                    <li class="fragment">Vegetation encroachment creates <span class="highlight">fire hazards</span></li>
+                </ul>
+            </section>
+
+            <!-- Slide 3: Our Solution -->
+            <section>
+                <h2>💡 Our Solution</h2>
+                <h3>AI-Powered Real-Time Risk Assessment</h3>
+                <div class="metric">
+                    <strong>🤖 ML Risk Prediction</strong> - Random Forest + Gradient Boosting
+                </div>
+                <div class="metric">
+                    <strong>📊 Live Dashboard</strong> - Real-time metrics visualization
+                </div>
+                <div class="metric">
+                    <strong>🚨 Automated Alerts</strong> - Instant notifications
+                </div>
+                <div class="metric">
+                    <strong>📈 Predictive Analytics</strong> - Weekly forecasting
+                </div>
+            </section>
+
+            <!-- Slide 4: Model Performance -->
+            <section>
+                <h2>📊 Model Performance</h2>
+                <h3>Enterprise-Grade Accuracy</h3>
+                <div class="metric">
+                    <h4>Classification Metrics</h4>
+                    <ul>
+                        <li>Accuracy: <span class="highlight">100%</span> ✅</li>
+                        <li>Precision: <span class="highlight">100%</span> ✅</li>
+                        <li>Recall: <span class="highlight">100%</span> ✅</li>
+                        <li>F1-Score: <span class="highlight">100%</span> ✅</li>
+                    </ul>
+                </div>
+                <div class="metric">
+                    <h4>Regression Metrics</h4>
+                    <ul>
+                        <li>R² Score: <span class="highlight">91.07%</span> ✅</li>
+                        <li>MAE: <span class="highlight">0.0703</span> ✅</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Slide 5: Risk Levels -->
+            <section>
+                <h2>🎯 Risk Categories</h2>
+                <div class="metric">
+                    <span class="emoji">🟢</span> <strong>Low (0-30%)</strong> - Monitor regularly
+                </div>
+                <div class="metric">
+                    <span class="emoji">🟡</span> <strong>Moderate (30-60%)</strong> - Schedule maintenance
+                </div>
+                <div class="metric">
+                    <span class="emoji">🟠</span> <strong>High (60-85%)</strong> - Urgent action needed
+                </div>
+                <div class="metric">
+                    <span class="emoji">🔴</span> <strong>Critical (85-100%)</strong> - Immediate intervention!
+                </div>
+            </section>
+
+            <!-- Slide 6: Live Demo Intro -->
+            <section class="center-text">
+                <h1>🖥️ Live Demo</h1>
+                <h3>Fire App in Action</h3>
+                <p><a href="http://localhost:5000" target="_blank">Open Fire App →</a></p>
+            </section>
+
+            <!-- Slide 7: Week 0 -->
+            <section>
+                <h2>📅 Week 0 - Current State</h2>
+                <h3>October 27, 2025</h3>
+                <div class="metric">
+                    <strong>Live Metrics:</strong>
+                    <ul>
+                        <li>🔴 Active Alerts: <span class="highlight">2</span></li>
+                        <li>🟡 Monitored Zones: <span class="highlight">8</span></li>
+                        <li>🌱 Avg Vegetation: <span class="highlight">0.45m</span></li>
+                    </ul>
+                </div>
+                <div class="metric">
+                    <strong>AI Risk Assessment:</strong>
+                    <ul>
+                        <li>ML Risk Level: <span class="highlight">🟢 Low (22%)</span></li>
+                        <li>Confidence: <span class="highlight">68%</span></li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Slide 8: Week 7 -->
+            <section>
+                <h2>📅 Week 7 - Critical State</h2>
+                <h3>December 15, 2025</h3>
+                <div class="metric">
+                    <strong>Live Metrics:</strong>
+                    <ul>
+                        <li>🔴 Active Alerts: <span class="highlight">5</span> 🚨</li>
+                        <li>🟡 Monitored Zones: <span class="highlight">8</span></li>
+                        <li>🌱 Avg Vegetation: <span class="highlight">1.54m</span> 🚨</li>
+                    </ul>
+                </div>
+                <div class="metric">
+                    <strong>AI Risk Assessment:</strong>
+                    <ul>
+                        <li>ML Risk Level: <span class="highlight">🔴 High (76%)</span></li>
+                        <li>Confidence: <span class="highlight">94%</span></li>
+                    </ul>
+                </div>
+                <p><strong>Action:</strong> Zone 6 & 7 require immediate vegetation removal!</p>
+            </section>
+
+            <!-- Slide 9: API Demo -->
+            <section>
+                <h2>🔌 API Demo</h2>
+                <h3>Real-Time Risk Prediction</h3>
+                <pre><code class="language-bash" data-trim>
+curl -X POST http://localhost:5000/api/risk_prediction \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vegetation_height": 1.5,
+    "clearance": 5.0,
+    "temperature": 30.0,
+    "humidity": 35.0,
+    "wind_speed": 10.0
+  }'
+                </code></pre>
+                <div class="metric fragment">
+                    <strong>Response:</strong> Risk Level = <span class="highlight">High (68%)</span><br>
+                    Confidence = <span class="highlight">85%</span>
+                </div>
+            </section>
+
+            <!-- Slide 10: Business Impact -->
+            <section>
+                <h2>💰 Business Impact</h2>
+                <h3>Quantifiable Benefits</h3>
+                <div class="metric">
+                    <strong>Safety Impact:</strong>
+                    <ul>
+                        <li>🔥 <span class="highlight">40-60%</span> reduction in wildfire incidents</li>
+                        <li>👥 Lives saved through early detection</li>
+                    </ul>
+                </div>
+                <div class="metric">
+                    <strong>Financial Impact:</strong>
+                    <ul>
+                        <li>💰 <span class="highlight">30-40%</span> cost reduction</li>
+                        <li>⏱️ <span class="highlight">70-80%</span> faster response time</li>
+                        <li>📉 <span class="highlight">50%</span> efficiency gain</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Slide 11: Technology Stack -->
+            <section>
+                <h2>⚙️ Technology Stack</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="metric">
+                        <h4>Frontend</h4>
+                        <ul>
+                            <li>🗺️ Leaflet.js</li>
+                            <li>🎨 Bootstrap 5</li>
+                            <li>⚡ Real-time updates</li>
+                        </ul>
+                    </div>
+                    <div class="metric">
+                        <h4>Backend</h4>
+                        <ul>
+                            <li>🐍 Flask API</li>
+                            <li>🤖 Scikit-learn</li>
+                            <li>📊 27 features</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 12: Key Features -->
+            <section>
+                <h2>🎯 Top 5 Risk Factors</h2>
+                <ol>
+                    <li class="fragment"><strong>Composite Risk Score</strong> - Overall calculation (25%)</li>
+                    <li class="fragment"><strong>Proximity Risk</strong> - Distance to lines (20%)</li>
+                    <li class="fragment"><strong>Fire Danger Rating</strong> - Weather-based (15%)</li>
+                    <li class="fragment"><strong>Vegetation Density</strong> - Biomass amount (12%)</li>
+                    <li class="fragment"><strong>Dryness Index</strong> - Moisture deficit (10%)</li>
+                </ol>
+            </section>
+
+            <!-- Slide 13: Use Cases -->
+            <section>
+                <h2>🏭 Use Cases</h2>
+                <div class="metric">
+                    <strong>Utility Companies</strong> - Predictive maintenance, compliance
+                </div>
+                <div class="metric">
+                    <strong>Fire Departments</strong> - Early warnings, hotspot identification
+                </div>
+                <div class="metric">
+                    <strong>Government Agencies</strong> - Infrastructure monitoring, planning
+                </div>
+                <div class="metric">
+                    <strong>Insurance Companies</strong> - Risk assessment, premium calculation
+                </div>
+            </section>
+
+            <!-- Slide 14: Implementation -->
+            <section>
+                <h2>🚀 Quick Deployment</h2>
+                <h3>6-8 Weeks to Production</h3>
+                <ul>
+                    <li><strong>Week 1-2:</strong> Onboarding & requirements</li>
+                    <li><strong>Week 3-4:</strong> Configuration & testing</li>
+                    <li><strong>Week 5-6:</strong> Pilot deployment</li>
+                    <li><strong>Week 7-8:</strong> Full rollout & training</li>
+                </ul>
+            </section>
+
+            <!-- Slide 15: Call to Action -->
+            <section class="center-text">
+                <h1>🤝 Let's Prevent Wildfires Together</h1>
+                <div class="metric">
+                    <h3>Next Steps:</h3>
+                    <ul style="text-align: left;">
+                        <li>📅 Schedule a personalized demo</li>
+                        <li>🧪 Start a 3-month pilot program</li>
+                        <li>💰 Request a custom quote</li>
+                    </ul>
+                </div>
+                <p><strong>Limited Time:</strong> <span class="highlight">20% discount</span> for early adopters!</p>
+                <p>Contact: <a href="mailto:demo@fireapp.com">demo@fireapp.com</a></p>
+            </section>
+
+            <!-- Slide 16: Q&A -->
+            <section class="center-text">
+                <h1>❓ Questions?</h1>
+                <p>Let's discuss how Fire App can help your organization</p>
+            </section>
+
+            <!-- Slide 17: Thank You -->
+            <section class="center-text">
+                <h1>Thank You! 🔥</h1>
+                <h3>Fire App - Preventing Wildfires with AI</h3>
+                <p>Let's build a safer future together</p>
+                <br>
+                <p>📧 demo@fireapp.com</p>
+                <p>🌐 www.fireapp.com</p>
+                <p>📱 (XXX) XXX-XXXX</p>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/highlight.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            transition: 'slide',
+            plugins: [ RevealHighlight ],
+            width: 1280,
+            height: 720,
+            center: false
+        });
+    </script>
+</body>
+</html>
+

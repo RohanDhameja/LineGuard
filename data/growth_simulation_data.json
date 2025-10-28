@@ -1,0 +1,610 @@
+{
+  "0": {
+    "zone_id": 0,
+    "initial_height": 1.5172348945186145,
+    "growth_parameters": {
+      "base_weekly_growth": 0.15,
+      "max_height": 15.0,
+      "growth_rate_type": "normal"
+    },
+    "weekly_heights": [
+      {
+        "week": 0,
+        "height_growth": 0.058136449161688086,
+        "cumulative_height": 1.5753713436803025,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8521869143897433,
+        "height_factor": 0.8682639619305923
+      },
+      {
+        "week": 1,
+        "height_growth": 0.05420346951603452,
+        "cumulative_height": 1.629574813196337,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8370201168395015,
+        "height_factor": 0.8639031701958837
+      },
+      {
+        "week": 2,
+        "height_growth": 0.05514792003612572,
+        "cumulative_height": 1.6847227332324628,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8411582960848202,
+        "height_factor": 0.859876664506494
+      },
+      {
+        "week": 3,
+        "height_growth": 0.05697134784288239,
+        "cumulative_height": 1.7416940810753452,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.832825489240563,
+        "height_factor": 0.8558183388946876
+      },
+      {
+        "week": 4,
+        "height_growth": 0.02900483985379483,
+        "cumulative_height": 1.77069892092914,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.8239338343739364,
+        "height_factor": 0.8516658610717411
+      },
+      {
+        "week": 5,
+        "height_growth": 0.036083631381501294,
+        "cumulative_height": 1.8067825523106413,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.8215191271621253,
+        "height_factor": 0.8495672234228411
+      },
+      {
+        "week": 6,
+        "height_growth": 0.035590537967953424,
+        "cumulative_height": 1.8423730902785949,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.8173743084663441,
+        "height_factor": 0.8469707946000034
+      },
+      {
+        "week": 7,
+        "height_growth": 0.032294323197300946,
+        "cumulative_height": 1.8746674134758956,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.8131965330236514,
+        "height_factor": 0.8444253464881123
+      }
+    ],
+    "vegetation_type": "Mixed Oak-Pine Forest"
+  },
+  "1": {
+    "zone_id": 1,
+    "initial_height": 1.622323225077091,
+    "growth_parameters": {
+      "base_weekly_growth": 0.15,
+      "max_height": 15.0,
+      "growth_rate_type": "normal"
+    },
+    "weekly_heights": [
+      {
+        "week": 0,
+        "height_growth": 0.0476293266986255,
+        "cumulative_height": 1.6699525517757163,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8112043108929408,
+        "height_factor": 0.8604131726799114
+      },
+      {
+        "week": 1,
+        "height_growth": 0.054226677067255646,
+        "cumulative_height": 1.724179228842972,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8004827830292238,
+        "height_factor": 0.8569015131495447
+      },
+      {
+        "week": 2,
+        "height_growth": 0.04464742638491256,
+        "cumulative_height": 1.7688266552278846,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8007016737079761,
+        "height_factor": 0.8529381720298789
+      },
+      {
+        "week": 3,
+        "height_growth": 0.04376978595358372,
+        "cumulative_height": 1.8125964411814683,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.7993817058606523,
+        "height_factor": 0.8497023784064195
+      },
+      {
+        "week": 4,
+        "height_growth": 0.027970833517360114,
+        "cumulative_height": 1.8405672746988284,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7918004108978718,
+        "height_factor": 0.8465539350127687
+      },
+      {
+        "week": 5,
+        "height_growth": 0.029692088896037604,
+        "cumulative_height": 1.870259363594866,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7901290869411737,
+        "height_factor": 0.8445541305582723
+      },
+      {
+        "week": 6,
+        "height_growth": 0.03337735280085264,
+        "cumulative_height": 1.9036367163957189,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7928447551653437,
+        "height_factor": 0.8424415755117532
+      },
+      {
+        "week": 7,
+        "height_growth": 0.03196021007906237,
+        "cumulative_height": 1.935596926474781,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7914878234696401,
+        "height_factor": 0.8400794007957497
+      }
+    ],
+    "vegetation_type": "Chaparral Shrubland"
+  },
+  "2": {
+    "zone_id": 2,
+    "initial_height": 3.1353663025945737,
+    "growth_parameters": {
+      "base_weekly_growth": 0.15,
+      "max_height": 15.0,
+      "growth_rate_type": "normal"
+    },
+    "weekly_heights": [
+      {
+        "week": 0,
+        "height_growth": 0.047121941444200274,
+        "cumulative_height": 3.182488244038774,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.7692730095453716,
+        "height_factor": 0.7613034741196933
+      },
+      {
+        "week": 1,
+        "height_growth": 0.04270372905160877,
+        "cumulative_height": 3.2251919730903826,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.7677492730947267,
+        "height_factor": 0.7585821291759605
+      },
+      {
+        "week": 2,
+        "height_growth": 0.04153195895123833,
+        "cumulative_height": 3.266723932041621,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.767847013628069,
+        "height_factor": 0.7561326913323634
+      },
+      {
+        "week": 3,
+        "height_growth": 0.0415584927233394,
+        "cumulative_height": 3.3082824247649603,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.7647122028137621,
+        "height_factor": 0.7537655906028262
+      },
+      {
+        "week": 4,
+        "height_growth": 0.029577676079057705,
+        "cumulative_height": 3.337860100844018,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7630925172376725,
+        "height_factor": 0.7514117660586551
+      },
+      {
+        "week": 5,
+        "height_growth": 0.021801536936539457,
+        "cumulative_height": 3.3596616377805577,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.749612786079638,
+        "height_factor": 0.7497454557472231
+      },
+      {
+        "week": 6,
+        "height_growth": 0.02794651578353097,
+        "cumulative_height": 3.3876081535640887,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7473857549493605,
+        "height_factor": 0.7485219514632334
+      },
+      {
+        "week": 7,
+        "height_growth": 0.025737685642195477,
+        "cumulative_height": 3.413345839206284,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7480464750658622,
+        "height_factor": 0.746959418388547
+      }
+    ],
+    "vegetation_type": "Dense Pine Forest"
+  },
+  "3": {
+    "zone_id": 3,
+    "initial_height": 1.9202789282454433,
+    "growth_parameters": {
+      "base_weekly_growth": 0.15,
+      "max_height": 15.0,
+      "growth_rate_type": "normal"
+    },
+    "weekly_heights": [
+      {
+        "week": 0,
+        "height_growth": 0.047254536604055375,
+        "cumulative_height": 1.9675334648494986,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.7651400156639393,
+        "height_factor": 0.8389065440662394
+      },
+      {
+        "week": 1,
+        "height_growth": 0.05108690658986905,
+        "cumulative_height": 2.0186203714393676,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.7635784503897356,
+        "height_factor": 0.8355940703547269
+      },
+      {
+        "week": 2,
+        "height_growth": 0.04692420079366512,
+        "cumulative_height": 2.0655445722330326,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.7549715785304958,
+        "height_factor": 0.8320422553460173
+      },
+      {
+        "week": 3,
+        "height_growth": 0.05162791139801298,
+        "cumulative_height": 2.117172483631046,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.746886999627439,
+        "height_factor": 0.8288063535079419
+      },
+      {
+        "week": 4,
+        "height_growth": 0.030927902981466616,
+        "cumulative_height": 2.1481003866125126,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7434291544656717,
+        "height_factor": 0.8252750394953021
+      },
+      {
+        "week": 5,
+        "height_growth": 0.026868611767061946,
+        "cumulative_height": 2.1749689983795744,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7427823906677158,
+        "height_factor": 0.8231739680897131
+      },
+      {
+        "week": 6,
+        "height_growth": 0.025550993102206262,
+        "cumulative_height": 2.2005199914817806,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7408989696282939,
+        "height_factor": 0.821357327589988
+      },
+      {
+        "week": 7,
+        "height_growth": 0.027823846216660234,
+        "cumulative_height": 2.228343837698441,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7340311328955307,
+        "height_factor": 0.8196371963639132
+      }
+    ],
+    "vegetation_type": "Grassland with Oak"
+  },
+  "4": {
+    "zone_id": 4,
+    "initial_height": 3.083105007834192,
+    "growth_parameters": {
+      "base_weekly_growth": 0.15,
+      "max_height": 15.0,
+      "growth_rate_type": "normal"
+    },
+    "weekly_heights": [
+      {
+        "week": 0,
+        "height_growth": 0.05119540372126005,
+        "cumulative_height": 3.134300411555452,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.7947429338701693,
+        "height_factor": 0.7643445492497368
+      },
+      {
+        "week": 1,
+        "height_growth": 0.04094673638632351,
+        "cumulative_height": 3.1752471479417754,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.7852351112198628,
+        "height_factor": 0.7613652563635656
+      },
+      {
+        "week": 2,
+        "height_growth": 0.046545690880588644,
+        "cumulative_height": 3.2217928388223647,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.7885773749943845,
+        "height_factor": 0.7589990447778576
+      },
+      {
+        "week": 3,
+        "height_growth": 0.04610714613464361,
+        "cumulative_height": 3.267899984957008,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.7819629475310101,
+        "height_factor": 0.7563270822575282
+      },
+      {
+        "week": 4,
+        "height_growth": 0.02858523681923002,
+        "cumulative_height": 3.296485221776238,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7877248009436215,
+        "height_factor": 0.7536987776014203
+      },
+      {
+        "week": 5,
+        "height_growth": 0.023351634260828622,
+        "cumulative_height": 3.3198368560370666,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7757292499946303,
+        "height_factor": 0.7520784502977194
+      },
+      {
+        "week": 6,
+        "height_growth": 0.028071470170058115,
+        "cumulative_height": 3.3479083262071248,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7803778343797477,
+        "height_factor": 0.7507599460925539
+      },
+      {
+        "week": 7,
+        "height_growth": 0.029493575166755045,
+        "cumulative_height": 3.37740190137388,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.779220958467329,
+        "height_factor": 0.7491810518630937
+      }
+    ],
+    "vegetation_type": "Sparse Mixed Forest"
+  },
+  "5": {
+    "zone_id": 5,
+    "initial_height": 3.71394102514047,
+    "growth_parameters": {
+      "base_weekly_growth": 0.15,
+      "max_height": 15.0,
+      "growth_rate_type": "normal"
+    },
+    "weekly_heights": [
+      {
+        "week": 0,
+        "height_growth": 0.04214740661271314,
+        "cumulative_height": 3.756088431753183,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8526074336124794,
+        "height_factor": 0.7291849936985981
+      },
+      {
+        "week": 1,
+        "height_growth": 0.042554347317298465,
+        "cumulative_height": 3.7986427790704815,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8472157121333599,
+        "height_factor": 0.7269508370502328
+      },
+      {
+        "week": 2,
+        "height_growth": 0.05253629671716212,
+        "cumulative_height": 3.851179075787644,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8468171530042157,
+        "height_factor": 0.7247089558088865
+      },
+      {
+        "week": 3,
+        "height_growth": 0.041449410401435405,
+        "cumulative_height": 3.892628486189079,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8465149408797135,
+        "height_factor": 0.7219601988599194
+      },
+      {
+        "week": 4,
+        "height_growth": 0.030548559216864363,
+        "cumulative_height": 3.9231770454059434,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.8524788879901872,
+        "height_factor": 0.7198061914591026
+      },
+      {
+        "week": 5,
+        "height_growth": 0.027442480407198547,
+        "cumulative_height": 3.950619525813142,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.8510527260061737,
+        "height_factor": 0.7182268793529114
+      },
+      {
+        "week": 6,
+        "height_growth": 0.025119602435065065,
+        "cumulative_height": 3.975739128248207,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.8426402385783212,
+        "height_factor": 0.7168140441001045
+      },
+      {
+        "week": 7,
+        "height_growth": 0.030359398300705758,
+        "cumulative_height": 4.006098526548913,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.8485031125315137,
+        "height_factor": 0.7155256625953818
+      }
+    ],
+    "vegetation_type": "Oak Woodland"
+  },
+  "6": {
+    "zone_id": 6,
+    "initial_height": 4.0112300999773565,
+    "growth_parameters": {
+      "base_weekly_growth": 0.35,
+      "max_height": 25.0,
+      "growth_rate_type": "fast"
+    },
+    "weekly_heights": [
+      {
+        "week": 0,
+        "height_growth": 0.10563719920746745,
+        "cumulative_height": 4.116867299184824,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8598848433635802,
+        "height_factor": 0.71371320923608
+      },
+      {
+        "week": 1,
+        "height_growth": 0.10628404441280218,
+        "cumulative_height": 4.223151343597626,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.853575822904257,
+        "height_factor": 0.7083724588512247
+      },
+      {
+        "week": 2,
+        "height_growth": 0.09939308690797596,
+        "cumulative_height": 4.322544430505602,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8434371518537052,
+        "height_factor": 0.7030790686553001
+      },
+      {
+        "week": 3,
+        "height_growth": 0.10631717105183522,
+        "cumulative_height": 4.428861601557438,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.846527176936887,
+        "height_factor": 0.6981999635973194
+      },
+      {
+        "week": 4,
+        "height_growth": 0.0546192919414376,
+        "cumulative_height": 4.483480893498875,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.8348366941183175,
+        "height_factor": 0.6930553688948413
+      },
+      {
+        "week": 5,
+        "height_growth": 0.058272093007249705,
+        "cumulative_height": 4.541752986506125,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.8309446556438483,
+        "height_factor": 0.690441757304948
+      },
+      {
+        "week": 6,
+        "height_growth": 0.06731710618475438,
+        "cumulative_height": 4.609070092690879,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.8172113107199366,
+        "height_factor": 0.6876750010318151
+      },
+      {
+        "week": 7,
+        "height_growth": 0.054721278756692665,
+        "cumulative_height": 4.663791371447572,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.820925364672579,
+        "height_factor": 0.6845062647076449
+      }
+    ],
+    "vegetation_type": "Eucalyptus Grove"
+  },
+  "7": {
+    "zone_id": 7,
+    "initial_height": 3.7061661071991434,
+    "growth_parameters": {
+      "base_weekly_growth": 0.25,
+      "max_height": 20.0,
+      "growth_rate_type": "variable"
+    },
+    "weekly_heights": [
+      {
+        "week": 0,
+        "height_growth": 0.07647285760387139,
+        "cumulative_height": 3.7826389648030148,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.8008624007725904,
+        "height_factor": 0.7295986289519368
+      },
+      {
+        "week": 1,
+        "height_growth": 0.06736876996779302,
+        "cumulative_height": 3.850007734770808,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.783927016602613,
+        "height_factor": 0.7255504570305576
+      },
+      {
+        "week": 2,
+        "height_growth": 0.07622760170291712,
+        "cumulative_height": 3.926235336473725,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.7805633673879335,
+        "height_factor": 0.7220212574246249
+      },
+      {
+        "week": 3,
+        "height_growth": 0.0614075632768895,
+        "cumulative_height": 3.9876428997506146,
+        "seasonal_factor": 0.5,
+        "coverage_factor": 0.769335546268718,
+        "height_factor": 0.7180691520995156
+      },
+      {
+        "week": 4,
+        "height_growth": 0.046559661700539885,
+        "cumulative_height": 4.0342025614511545,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7610757417546066,
+        "height_factor": 0.714916735555087
+      },
+      {
+        "week": 5,
+        "height_growth": 0.039789988566186756,
+        "cumulative_height": 4.0739925500173415,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7550280706312155,
+        "height_factor": 0.7125449384254853
+      },
+      {
+        "week": 6,
+        "height_growth": 0.0365998345986034,
+        "cumulative_height": 4.110592384615944,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7458692885665189,
+        "height_factor": 0.7105304315361229
+      },
+      {
+        "week": 7,
+        "height_growth": 0.034481037392510724,
+        "cumulative_height": 4.145073422008456,
+        "seasonal_factor": 0.3,
+        "coverage_factor": 0.7439151548332954,
+        "height_factor": 0.7086874687771781
+      }
+    ],
+    "vegetation_type": "Tall Manzanita Shrubs"
+  }
+}
