@@ -26,6 +26,8 @@ Thumbs.db
 
 # Documentation files (keep only README.md)
 DEMO_PRESENTATION.md
+DEMO_PRESENTATION_UPDATES.md
+DEMO_SCRIPT_1.75_MINUTES.md
 HOW_TO_EXPLAIN_AI.md
 HOW_WE_BUILT_THE_MODEL.md
 IMPLEMENTATION_COMPLETE.md
@@ -41,6 +43,10 @@ test_*.py
 
 # Training artifacts (optional - comment out if you want to include them)
 fire_app_risk_model_training_results.png
+
+# Deployment artifacts
+*.zip
+*.tar.gz
 
 # Presentation (optional - keep if you want to share)
 # presentation.html

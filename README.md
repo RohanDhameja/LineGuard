@@ -109,70 +109,137 @@ Fire App/
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.8 or higher
-- pip (Python package manager)
+- **Python 3.8+** (3.10 recommended)
+- **pip** (Python package manager)
+- **Git** (for cloning the repository)
 
-### Installation
+### Step-by-Step Setup
 
-1. **Clone the repository**
+#### 1. Clone the Repository
 ```bash
-git clone <your-repo-url>
-cd "Fire App"
+git clone https://github.com/RohanDhameja/LineGuard.git
+cd LineGuard
 ```
 
-2. **Install dependencies**
+#### 2. Create Virtual Environment (Recommended)
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+#### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-3. **Generate synthetic datasets** (if not included)
-```bash
-python3 generate_datasets.py
-```
+**Note**: This will install:
+- Flask 3.0.0 (web framework)
+- scikit-learn 1.3.0+ (ML models)
+- pandas, numpy (data processing)
+- joblib (model persistence)
 
-4. **Train ML models** (if not included)
+#### 4. Verify Data and Models
+
+The repository includes:
+- ✅ **Synthetic datasets** (`data/` folder):
+  - `lidar_canopy_data.json` - LIDAR measurements
+  - `vegetation_spread_data.json` - Spatial patterns
+  - `growth_simulation_data.json` - Weekly growth
+  
+- ✅ **Trained ML models** (`models/` folder):
+  - `fire_app_risk_model_classifier_*.pkl`
+  - `fire_app_risk_model_regressor_*.pkl`
+  - `fire_app_risk_model_scaler_*.pkl`
+  - `fire_app_risk_model_metadata_*.json`
+
+If files are missing, regenerate them:
 ```bash
+# Generate synthetic data
+python3 generate_datasets.py
+
+# Train ML models
 python3 train_risk_model.py
 ```
 
-5. **Run the application**
+#### 5. Run the Application
 ```bash
 python3 app.py
 ```
 
-6. **Open in browser**
+You should see:
+```
+✅ Models loaded from timestamp: YYYYMMDD_HHMMSS
+✅ ML Risk Model loaded successfully
+✅ Loaded synthetic LIDAR and growth simulation data
+ * Running on http://127.0.0.1:5000
+```
+
+#### 6. Open in Browser
+Navigate to:
 ```
 http://127.0.0.1:5000
 ```
 
+**🎉 The app is now running!**
+
 ## 🎮 Usage
+
+### What You'll See
+
+The system monitors **10 vegetation zones** across California:
+- **5 Core Zones** (Zone 2, 4, 5, 6, 7): Real California transmission line locations
+- **5 Additional Zones**: Supplementary monitoring in high-risk areas (Northern CA)
+
+**Week 0 (Today):** 7-8 active high-risk alerts  
+**Week 1:** Peak risk - 8 alerts (rapid vegetation growth)  
+**Week 7:** Persistent risk - 8 alerts (zones remain critical)
 
 ### Monitor Vegetation Growth
 1. Navigate to **Tab 2 - Power Line Vegetation Predictor**
-2. Use the **Week Slider** to see vegetation growth over time
-3. Watch zones change color as vegetation approaches danger levels
+2. Use **Week buttons** (Week 0-7) to see vegetation growth over time
+3. Watch zones change from green → yellow → red as vegetation grows
+4. Observe the **Live Metrics Panel** (right side):
+   - 🔴 Active Alerts count
+   - 🟡 Monitored Zones count
+   - 🌱 Average Vegetation height
+   - 🤖 ML Risk Assessment (level, score, confidence)
 
 ### View Zone Details
-- **Hover** over any zone to see:
-  - Zone ID
-  - Risk level
-  - Vegetation height
-  - Clearance distance
-  - ML predictions
-- **Click** for detailed popup
+**Two ways to see zones:**
+
+1. **Red Marker Pins** (📍): High-risk alert zones
+   - **Hover** to see popup with details
+   - **Click** for full information panel
+   
+2. **Colored Circles**: All monitored zones
+   - **Red**: Critical risk (clearance ≤ 6.0m)
+   - **Yellow**: Moderate risk (clearance 6.0-7.5m)
+   - **Green**: Safe (clearance > 7.5m)
+   - **Hover** for tooltip with:
+     - Zone ID
+     - Risk level
+     - Vegetation height
+     - Clearance distance
+     - GPS coordinates
+     - ML predictions
 
 ### Send Alerts
-1. Click **"Notify Authority"** button
-2. Review alert zones
-3. Notification sent to fire department with:
+1. Click **"Notify Authority"** button (right panel)
+2. Review critical alert zones in popup
+3. Click **"Send Alert"** to notify fire department
+4. Notification includes:
    - Number of critical zones
-   - Coordinates
-   - Priority level
+   - Precise coordinates
+   - Vegetation and clearance data
+   - Priority level (LOW/MEDIUM/HIGH)
 
 ### Navigate the Map
-- **Tab 1 - Focus on City or Coordinate**: Jump to specific locations
-- Zoom in/out with mouse wheel
-- Pan by clicking and dragging
+- **Tab 1 - Focus on City or Coordinate**: Jump to specific California locations
+  - Search by city name (e.g., "Sacramento", "Los Angeles")
+  - Or enter GPS coordinates
+- **Zoom**: Mouse wheel or +/- buttons
+- **Pan**: Click and drag the map
+- **Week Navigation**: Use slider or week buttons to see time progression
 
 ## 🧠 How the AI Works
 
@@ -346,6 +413,80 @@ MIT License - feel free to use this project for educational or commercial purpos
 - California power grid data (synthetic)
 - Leaflet.js for mapping
 - scikit-learn for ML capabilities
+
+## 🐛 Troubleshooting
+
+### Port 5000 Already in Use
+```bash
+# Find process using port 5000
+lsof -i :5000
+
+# Kill the process (replace <PID> with actual process ID)
+kill -9 <PID>
+
+# Or kill all processes on port 5000
+lsof -ti :5000 | xargs kill -9
+```
+
+### ML Models Not Loading
+**Error**: `❌ Error loading models: No such file or directory`
+
+**Solution**:
+```bash
+# Train the models
+python3 train_risk_model.py
+
+# Verify models exist
+ls models/
+# Should see: fire_app_risk_model_*.pkl files
+```
+
+### Synthetic Data Missing
+**Error**: `❌ Could not load synthetic data`
+
+**Solution**:
+```bash
+# Generate synthetic datasets
+python3 generate_datasets.py
+
+# Verify data exists
+ls data/
+# Should see: lidar_canopy_data.json, vegetation_spread_data.json, growth_simulation_data.json
+```
+
+### Virtual Environment Issues
+```bash
+# Deactivate current environment
+deactivate
+
+# Remove old environment
+rm -rf venv
+
+# Create fresh environment
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Browser Shows "Unable to Connect"
+1. Check if app is running in terminal
+2. Verify it says `Running on http://127.0.0.1:5000`
+3. Try `http://localhost:5000` instead
+4. Check firewall settings
+
+### Map Not Loading
+1. Check browser console for JavaScript errors (F12)
+2. Verify internet connection (Leaflet.js loads from CDN)
+3. Clear browser cache and reload
+
+### Need Help?
+- Check `ML_RISK_MODEL_README.md` for ML-specific issues
+- Review `DEPLOY_PYTHONANYWHERE.md` for deployment problems
+- Open an issue on GitHub with:
+  - Error message
+  - Python version (`python3 --version`)
+  - Operating system
+  - Terminal output
 
 ## 📧 Contact
 

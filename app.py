@@ -225,10 +225,10 @@ def state():
     zones_out = []
     alerts = []
 
-    # === Artificial alerts for week 0 and week 1 ===
+    # === Artificial alerts for all weeks (persistent zones) ===
     ARTIFICIAL_ALERTS = [
     {
-        "date": DATE_LIST[0],  # week 0 (current week)
+        "date": DATE_LIST[0],  # week 0
         "zones": [
             {"lat": 39.8189566248284, "lon": -121.451189414863, "veg_height_m": 5.2, "clearance_m": 2.8},
             {"lat": 39.7648885984727, "lon": -121.486122509439, "veg_height_m": 4.9, "clearance_m": 3.1}
@@ -237,8 +237,50 @@ def state():
     {
         "date": DATE_LIST[1],  # week 1
         "zones": [
+            {"lat": 39.8189566248284, "lon": -121.451189414863, "veg_height_m": 5.4, "clearance_m": 2.6},
+            {"lat": 39.7648885984727, "lon": -121.486122509439, "veg_height_m": 5.1, "clearance_m": 2.9}
+        ]
+    },
+    {
+        "date": DATE_LIST[2],  # week 2
+        "zones": [
+            {"lat": 39.8189566248284, "lon": -121.451189414863, "veg_height_m": 5.6, "clearance_m": 2.4},
+            {"lat": 39.7648885984727, "lon": -121.486122509439, "veg_height_m": 5.3, "clearance_m": 2.7}
+        ]
+    },
+    {
+        "date": DATE_LIST[3],  # week 3
+        "zones": [
             {"lat": 39.8189566248284, "lon": -121.451189414863, "veg_height_m": 5.8, "clearance_m": 2.2},
-            {"lat": 39.7648885984727, "lon": -121.486122509439, "veg_height_m": 6.2, "clearance_m": 1.8}
+            {"lat": 39.7648885984727, "lon": -121.486122509439, "veg_height_m": 5.5, "clearance_m": 2.5}
+        ]
+    },
+    {
+        "date": DATE_LIST[4],  # week 4
+        "zones": [
+            {"lat": 39.8189566248284, "lon": -121.451189414863, "veg_height_m": 6.0, "clearance_m": 2.0},
+            {"lat": 39.7648885984727, "lon": -121.486122509439, "veg_height_m": 5.7, "clearance_m": 2.3}
+        ]
+    },
+    {
+        "date": DATE_LIST[5],  # week 5
+        "zones": [
+            {"lat": 39.8189566248284, "lon": -121.451189414863, "veg_height_m": 6.2, "clearance_m": 1.8},
+            {"lat": 39.7648885984727, "lon": -121.486122509439, "veg_height_m": 5.9, "clearance_m": 2.1}
+        ]
+    },
+    {
+        "date": DATE_LIST[6],  # week 6
+        "zones": [
+            {"lat": 39.8189566248284, "lon": -121.451189414863, "veg_height_m": 6.4, "clearance_m": 1.6},
+            {"lat": 39.7648885984727, "lon": -121.486122509439, "veg_height_m": 6.1, "clearance_m": 1.9}
+        ]
+    },
+    {
+        "date": DATE_LIST[7],  # week 7
+        "zones": [
+            {"lat": 39.8189566248284, "lon": -121.451189414863, "veg_height_m": 6.6, "clearance_m": 1.4},
+            {"lat": 39.7648885984727, "lon": -121.486122509439, "veg_height_m": 6.3, "clearance_m": 1.7}
         ]
     }]
 
