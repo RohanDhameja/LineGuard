@@ -6,6 +6,12 @@ An AI-powered early warning system that predicts and prevents wildfires caused b
 ![Flask](https://img.shields.io/badge/flask-3.0.0-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
+## 🌐 Live Demo
+
+**Try it now:** [https://lineguard.pythonanywhere.com/](https://lineguard.pythonanywhere.com/)
+
+Experience the live monitoring system with real-time vegetation tracking, ML risk predictions, and interactive California power line maps.
+
 ## 🚨 The Problem We Solve
 
 **The Critical Chain Reaction:**
