@@ -5,6 +5,7 @@ import json
 from datetime import date, timedelta
 from risk_model import FireRiskModel
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 app = Flask(__name__)
 
@@ -114,7 +115,7 @@ def fetch_elevation_lidar(lat, lon):
             'units': 'Meters',
             'output': 'json'
         }
-        response = requests.get(USGS_ELEVATION_URL, params=params, timeout=10)
+        response = requests.get(USGS_ELEVATION_URL, params=params, timeout=3)  # Reduced timeout for faster loading
         
         if response.status_code == 200:
             data = response.json()
@@ -163,6 +164,9 @@ def fetch_elevation_lidar(lat, lon):
             print(f"⚠️  USGS Elevation API error: {response.status_code}")
             return get_default_elevation()
             
+    except requests.Timeout:
+        print(f"⚠️  USGS Elevation API timeout for {lat:.4f},{lon:.4f} - using defaults")
+        return get_default_elevation()
     except Exception as e:
         print(f"⚠️  LiDAR fetch error: {e}")
         return get_default_elevation()
@@ -310,16 +314,36 @@ def state():
     # Artificial alerts removed - using only real zone data
     ARTIFICIAL_ALERTS = []
 
+    # Pre-calculate zone centers
+    zone_centers = {}
+    for zone in ZONES:
+        center_lat = (zone["min_lat"] + zone["max_lat"]) / 2
+        center_lon = (zone["min_lon"] + zone["max_lon"]) / 2
+        zone_centers[zone["id"]] = (center_lat, center_lon)
+    
+    # Fetch elevation data in PARALLEL for much faster loading (5 concurrent requests)
+    elevation_data_cache = {}
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_zone = {
+            executor.submit(fetch_elevation_lidar, zone_centers[zone["id"]][0], zone_centers[zone["id"]][1]): zone["id"]
+            for zone in ZONES
+        }
+        for future in as_completed(future_to_zone):
+            zid = future_to_zone[future]
+            try:
+                elevation_data_cache[zid] = future.result()
+            except Exception as e:
+                print(f"⚠️  Error fetching elevation for zone {zid}: {e}")
+                elevation_data_cache[zid] = get_default_elevation()
+
     for zone in ZONES:
         zid = zone["id"]
         veg_h = veg_time_series[zid][day_i]
         clearance = LINE_HEIGHT_M - veg_h
         alert = clearance <= THRESHOLD_DISTANCE
         
-        # Fetch real LiDAR data for this zone (KEY DIFFERENTIATOR!)
-        center_lat = (zone["min_lat"] + zone["max_lat"]) / 2
-        center_lon = (zone["min_lon"] + zone["max_lon"]) / 2
-        elevation_data = fetch_elevation_lidar(center_lat, center_lon)
+        # Get elevation data from cache (already fetched in parallel)
+        elevation_data = elevation_data_cache.get(zid, get_default_elevation())
         
         # Calculate growth rate and breach prediction
         growth_rate_m_day = elevation_data['growth_rate_m_per_day']
@@ -350,8 +374,7 @@ def state():
         })
 
         if alert:
-            center_lat = (zone["min_lat"] + zone["max_lat"]) / 2
-            center_lon = (zone["min_lon"] + zone["max_lon"]) / 2
+            center_lat, center_lon = zone_centers[zid]
             alerts.append({
                 "zone_id": zid,
                 "lat": center_lat,

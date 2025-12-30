@@ -9,6 +9,7 @@ let zoneLayers = {}, alertMarkers = [], lineLayers = [];
 let isPlaying = false, currentDate = null;
 let intervalId = null;
 let dateList = [];
+let isUpdatingSlider = false; // Flag to prevent slider feedback loop
 
 function colorForHeight(h, clearance) {
     if (clearance <= 6.0) return 'red'; // High risk / alert
@@ -118,6 +119,15 @@ async function fetchMetadata() {
     const res = await fetch('/api/metadata');
     const data = await res.json();
     dateList = data.dates;
+    
+    // Set initial date label immediately
+    if (dateList.length > 0) {
+        const dayLabel = document.getElementById('dayLabel');
+        if (dayLabel) {
+            dayLabel.innerText = dateList[0];
+        }
+    }
+    
     return data;
 }
 
@@ -148,13 +158,28 @@ function drawLines(lines) {
 
 
 async function updateMapByDate(dateStr) {
-    const res = await fetch(`/api/state?date=${dateStr}`);
-    const data = await res.json();
-    document.getElementById('dayLabel').innerText = dateStr;
+    try {
+        console.log('📡 Fetching state for date:', dateStr);
+        const res = await fetch(`/api/state?date=${dateStr}`);
+        if (!res.ok) {
+            throw new Error(`API error: ${res.status}`);
+        }
+        const data = await res.json();
+        console.log('✅ State fetched, zones:', data.zones.length);
+        
+        const dayLabel = document.getElementById('dayLabel');
+        if (dayLabel) {
+            dayLabel.innerText = dateStr;
+        }
 
-    // Update slider
+    // Update slider (without triggering input event)
+    isUpdatingSlider = true;
     const index = dateList.indexOf(dateStr);
-    document.getElementById('dayRange').value = index;
+    if (index >= 0 && index < dateList.length) {
+        document.getElementById('dayRange').value = index;
+    }
+    // Use setTimeout to reset flag after DOM update
+    setTimeout(() => { isUpdatingSlider = false; }, 100);
 
     // Clear previous layers
     Object.values(zoneLayers).forEach(layer => map.removeLayer(layer));
@@ -315,52 +340,164 @@ async function updateMapByDate(dateStr) {
         alertItems.innerHTML = noAlertsHtml;
         alertItemsPredictor.innerHTML = noAlertsHtml;
     }
+    } catch (error) {
+        console.error('❌ Error in updateMapByDate:', error);
+        alert('Error loading map data: ' + error.message);
+    }
 }
 
 function playSimulation() {
     if (isPlaying) return;
+    
+    // Ensure we have a valid currentDate
+    if (!currentDate || dateList.indexOf(currentDate) === -1) {
+        currentDate = dateList[0];
+    }
+    
     isPlaying = true;
+    
+    // Clear any existing interval
+    if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+    }
+    
     intervalId = setInterval(() => {
+        // Get current index
         let index = dateList.indexOf(currentDate);
-        if (index >= dateList.length - 1) { pauseSimulation(); return; }
-        currentDate = dateList[index + 1];
+        
+        // Safety check - if date not found, use current slider position
+        if (index === -1) {
+            const slider = document.getElementById('dayRange');
+            if (slider) {
+                index = parseInt(slider.value) || 0;
+            } else {
+                index = 0;
+            }
+        }
+        
+        // Check if we've reached the end
+        if (index >= dateList.length - 1) {
+            pauseSimulation();
+            return;
+        }
+        
+        // Move to next date
+        const nextIndex = index + 1;
+        currentDate = dateList[nextIndex];
+        
+        // Update map with new date
         updateMapByDate(currentDate);
     }, 800);
 }
 
 function pauseSimulation() {
     isPlaying = false;
-    if (intervalId) clearInterval(intervalId);
+    if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+    }
 }
 
+// Wait for DOM to be fully loaded before setting up event listeners
 (async function init() {
-    if ("Notification" in window) Notification.requestPermission();
-    const metadata = await fetchMetadata();
-    drawLines(metadata.lines);
-    currentDate = dateList[0];
-    await updateMapByDate(currentDate);
+    try {
+        console.log('🚀 Starting initialization...');
+        
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+            return;
+        }
+        
+        console.log('📡 Fetching metadata...');
+        if ("Notification" in window) Notification.requestPermission();
+        
+        const metadata = await fetchMetadata();
+        console.log('✅ Metadata fetched, dates:', dateList.length);
+        
+        if (!dateList || dateList.length === 0) {
+            console.error('❌ No dates found in metadata!');
+            return;
+        }
+        
+        console.log('🗺️ Drawing transmission lines...');
+        drawLines(metadata.lines);
+        
+        console.log('📅 Setting initial date...');
+        currentDate = dateList[0];
+        console.log('Initial date:', currentDate);
+        
+        console.log('🗺️ Loading zones for initial date...');
+        await updateMapByDate(currentDate);
+        console.log('✅ Zones loaded!');
 
-    // Slider
-    const slider = document.getElementById('dayRange');
-    slider.max = dateList.length - 1; // Set to actual number of dates
+        // Setup slider (retry if not ready)
+        function setupSlider() {
+            const slider = document.getElementById('dayRange');
+            if (slider && dateList.length > 0) {
+                slider.max = dateList.length - 1;
+                slider.removeEventListener('input', slider._handler);
+                slider._handler = function(e) {
+                    if (isUpdatingSlider) return;
+                    const index = parseInt(e.target.value);
+                    if (index >= 0 && index < dateList.length) {
+                        pauseSimulation();
+                        currentDate = dateList[index];
+                        updateMapByDate(currentDate);
+                    }
+                };
+                slider.addEventListener('input', slider._handler);
+                console.log('✅ Slider initialized');
+            } else {
+                setTimeout(setupSlider, 100);
+            }
+        }
+        setupSlider();
+        
+        console.log('✅ App initialized successfully!');
+    } catch (error) {
+        console.error('❌ Initialization error:', error);
+        alert('Error loading app: ' + error.message);
+    }
+})();
+
+// Use event delegation for buttons (works even if buttons aren't in DOM yet)
+// This MUST be outside the async function so it runs immediately
+document.addEventListener('click', function(e) {
+    // Play button
+    if (e.target.closest('#playBtn') || e.target.id === 'playBtn') {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('▶️ Play clicked');
+        if (!isPlaying) {
+            playSimulation();
+        }
+        return false;
+    }
     
-    slider.addEventListener('input', e => {
-        const index = parseInt(e.target.value);
-        if (index < dateList.length) {
-            currentDate = dateList[index];
+    // Pause button  
+    if (e.target.closest('#pauseBtn') || e.target.id === 'pauseBtn') {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('⏸️ Pause clicked');
+        pauseSimulation();
+        return false;
+    }
+    
+    // Reset button
+    if (e.target.closest('#resetBtn') || e.target.id === 'resetBtn') {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('⏮️ Reset clicked');
+        pauseSimulation();
+        if (dateList.length > 0) {
+            currentDate = dateList[0];
             updateMapByDate(currentDate);
         }
-    });
-
-    // Buttons
-    document.getElementById('playBtn').addEventListener('click', () => playSimulation());
-    document.getElementById('pauseBtn').addEventListener('click', pauseSimulation);
-    document.getElementById('resetBtn').addEventListener('click', () => {
-        currentDate = dateList[0];
-        updateMapByDate(currentDate);
-        pauseSimulation();
-    });
-})();
+        return false;
+    }
+});
 
 // California approximate bounds
 const CA_BOUNDS = {
@@ -649,35 +786,30 @@ document.getElementById('notifyAuthorityBtn').addEventListener('click', async ()
 });
 
 // ========== INITIALIZE: Load zones on page load ==========
-(async function initializeMap() {
-    try {
-        // First fetch metadata (populates dateList)
-        await fetchMetadata();
-        
-        // Then load today's data
-        const today = new Date().toISOString().split('T')[0];
-        currentDate = today;
-        await updateMapByDate(today);
-        
-        console.log('✅ Initial zones and metrics loaded');
-    } catch (error) {
-        console.error('❌ Error loading initial zones:', error);
-    }
-})();
+// This is handled by the init() function above, so we don't need duplicate initialization
 
 // ========== TAB SWITCHING: Reset to default zones when switching to Time Predictor ==========
-document.getElementById('tab2-btn').addEventListener('click', async () => {
-    // Clear any transmission tower markers
-    transmissionTowerMarkers.forEach(marker => map.removeLayer(marker));
-    transmissionTowerMarkers = [];
-    
-    // Reload default zones
-    const today = new Date().toISOString().split('T')[0];
-    currentDate = today;
-    await updateMapByDate(today);
-    
-    // Reset the info text in Tab 1
-    document.getElementById('alertItems').innerHTML = 'Select a city or enter coordinates to scan transmission towers with vegetation risk metrics';
-    
-    console.log('✅ Reset to default zones');
-});
+const tab2Btn = document.getElementById('tab2-btn');
+if (tab2Btn) {
+    tab2Btn.addEventListener('click', async () => {
+        // Clear any transmission tower markers
+        transmissionTowerMarkers.forEach(marker => map.removeLayer(marker));
+        transmissionTowerMarkers = [];
+        
+        // Reload default zones
+        if (dateList.length > 0) {
+            currentDate = dateList[0];
+            await updateMapByDate(currentDate);
+        }
+        
+        // Reset the info text in Tab 1
+        const alertItems = document.getElementById('alertItems');
+        if (alertItems) {
+            alertItems.innerHTML = 'Select a city or enter coordinates to scan transmission towers with vegetation risk metrics';
+        }
+        
+        // Controls are already set up via event delegation, no need to re-setup
+        
+        console.log('✅ Reset to default zones');
+    });
+}
