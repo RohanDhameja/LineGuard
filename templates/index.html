@@ -116,55 +116,16 @@
             <div class="tab-pane fade show active" id="tab1" role="tabpanel">
                 <h3 class="mb-3"><i class="fas fa-broadcast-tower"></i> Monitor Transmission Towers</h3>
 
-                <label for="citySelect" class="form-label fw-bold"><i class="fas fa-city"></i> Select City</label>
-                <select id="citySelect" class="form-select mb-3 modern-input">
-                    <option value="">-- Select City --</option>
-                    <option value="adelanto">Adelanto</option>
-                    <option value="agouraHills">Agoura Hills</option>
-                    <option value="alameda">Alameda</option>
-                    <option value="alhambra">Alhambra</option>
-                    <option value="alisoViejo">Aliso Viejo</option>
-                    <option value="alpine">Alpine</option>
-                    <option value="altadena">Altadena</option>
-                    <option value="alturas">Alturas</option>
-                    <option value="amador">Amador</option>
-                    <option value="americanCanyon">American Canyon</option>
-                    <option value="anaheim">Anaheim</option>
-                    <option value="anaheimHills">Anaheim Hills</option>
-                    <option value="anderson">Anderson</option>
-                    <option value="angelsCamp">Angels Camp</option>
-                    <option value="angelusOaks">Angelus Oaks</option>
-                    <option value="antioch">Antioch</option>
-                    <option value="appleValley">Apple Valley</option>
-                    <option value="aptos">Aptos</option>
-                    <option value="arcadia">Arcadia</option>
-                    <option value="arcata">Arcata</option>
-                    <option value="arnold">Arnold</option>
-                    <option value="arroyoGrande">Arroyo Grande</option>
-                    <option value="artesia">Artesia</option>
-                    <option value="atascadero">Atascadero</option>
-                    <option value="auburn">Auburn</option>
-                    <option value="avalon">Avalon</option>
-                    <option value="avilaBeach">Avila Beach</option>
-                    <option value="azusa">Azusa</option>
-                    <option value="bakersfield">Bakersfield</option>
-                    <option value="bigbar">Big Bar Mountain</option>
-                    <option value="boulderCreek">Boulder Creek</option>
-                    <option value="chulaVista">Chula Vista</option>
-                    <option value="fresno">Fresno</option>
-                    <option value="irvine">Irvine</option>
-                    <option value="longBeach">Long Beach</option>
-                    <option value="losAngeles">Los Angeles</option>
-                    <option value="oakland">Oakland</option>
-                    <option value="panocheValley">Panoche Valley Solar Farm</option>
-                    <option value="riverside">Riverside</option>
-                    <option value="sacramento">Sacramento</option>
-                    <option value="sanDiego">San Diego</option>
-                    <option value="sanFrancisco">San Francisco</option>
-                    <option value="sanJose">San Jose</option>
-                    <option value="santaAna">Santa Ana</option>
-                    <option value="stockton">Stockton</option>
-                </select>
+                <label for="citySearch" class="form-label fw-bold"><i class="fas fa-city"></i> Search City</label>
+                <div class="position-relative">
+                    <input type="text" id="citySearch" class="form-control mb-3 modern-input" 
+                           placeholder="Type to search cities in California..." 
+                           autocomplete="off">
+                    <div id="citySuggestions" class="list-group position-absolute w-100" 
+                         style="z-index: 1000; max-height: 200px; overflow-y: auto; display: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
+                </div>
+                <input type="hidden" id="selectedCityLat" value="">
+                <input type="hidden" id="selectedCityLon" value="">
 
                 <label class="form-label fw-bold"><i class="fas fa-map-pin"></i> Or Input Lat-Long</label>
                 <div class="d-flex mb-3">

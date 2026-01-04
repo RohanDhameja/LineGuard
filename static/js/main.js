@@ -157,7 +157,22 @@ function drawLines(lines) {
 }
 
 
+// Helper function to calculate distance between two coordinates (Haversine formula)
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in km
+}
+
 async function updateMapByDate(dateStr) {
+    // Preserve button states during update (don't reset them)
+    const wasPlaying = isPlaying;
+    
     try {
         console.log('📡 Fetching state for date:', dateStr);
         const res = await fetch(`/api/state?date=${dateStr}`);
@@ -166,6 +181,44 @@ async function updateMapByDate(dateStr) {
         }
         const data = await res.json();
         console.log('✅ State fetched, zones:', data.zones.length);
+        
+        // Filter zones by current location if a city/location is selected
+        if (currentLocation) {
+            console.log(`📍 Filtering zones by location: ${currentLocation.lat}, ${currentLocation.lon}, radius ${currentLocation.radius}km`);
+            const filteredZones = [];
+            const filteredAlerts = [];
+            
+            data.zones.forEach(z => {
+                const zoneCenterLat = (z.bbox.min_lat + z.bbox.max_lat) / 2;
+                const zoneCenterLon = (z.bbox.min_lon + z.bbox.max_lon) / 2;
+                const distance = getDistance(currentLocation.lat, currentLocation.lon, zoneCenterLat, zoneCenterLon);
+                if (distance <= currentLocation.radius) {
+                    filteredZones.push(z);
+                    console.log(`  ✅ Zone ${z.id} within range: ${distance.toFixed(2)}km`);
+                } else {
+                    console.log(`  ❌ Zone ${z.id} out of range: ${distance.toFixed(2)}km > ${currentLocation.radius}km`);
+                }
+            });
+            
+            console.log(`📍 Filter result: ${data.zones.length} total zones -> ${filteredZones.length} zones within ${currentLocation.radius}km`);
+            
+            // Only filter if we have zones to show, otherwise show all zones (fallback)
+            if (filteredZones.length > 0) {
+                data.zones = filteredZones;
+                
+                // Also filter alerts
+                data.alerts.forEach(a => {
+                    const distance = getDistance(currentLocation.lat, currentLocation.lon, a.lat, a.lon);
+                    if (distance <= currentLocation.radius) {
+                        filteredAlerts.push(a);
+                    }
+                });
+                data.alerts = filteredAlerts;
+            } else {
+                console.warn(`⚠️ No zones found within ${currentLocation.radius}km. Showing all zones as fallback.`);
+                // Keep all zones if none match (fallback behavior)
+            }
+        }
         
         const dayLabel = document.getElementById('dayLabel');
         if (dayLabel) {
@@ -181,10 +234,34 @@ async function updateMapByDate(dateStr) {
     // Use setTimeout to reset flag after DOM update
     setTimeout(() => { isUpdatingSlider = false; }, 100);
 
-    // Clear previous layers
-    Object.values(zoneLayers).forEach(layer => map.removeLayer(layer));
+    // Clear previous layers - ensure all markers are removed
+    console.log(`🗑️ Clearing markers: ${Object.keys(zoneLayers).length} zone markers, ${alertMarkers.length} alert markers, ${transmissionTowerMarkers.length} tower markers`);
+    
+    // Clear transmission tower markers (shouldn't be here in Time Predictor, but clear anyway)
+    transmissionTowerMarkers.forEach(marker => {
+        try {
+            map.removeLayer(marker);
+        } catch (e) {
+            console.warn('⚠️ Error removing tower marker:', e);
+        }
+    });
+    transmissionTowerMarkers = [];
+    
+    Object.values(zoneLayers).forEach(layer => {
+        try {
+            map.removeLayer(layer);
+        } catch (e) {
+            console.warn('⚠️ Error removing zone layer:', e);
+        }
+    });
     zoneLayers = {};
-    alertMarkers.forEach(m => map.removeLayer(m));
+    alertMarkers.forEach(m => {
+        try {
+            map.removeLayer(m);
+        } catch (e) {
+            console.warn('⚠️ Error removing alert marker:', e);
+        }
+    });
     alertMarkers = [];
 
     const alertItems = document.getElementById('alertItems');
@@ -196,15 +273,39 @@ async function updateMapByDate(dateStr) {
     let totalHeight = 0;
     let alertCount = 0;
     let riskCounts = { low: 0, moderate: 0, high: 0 };
+    const zonesProcessed = new Set(); // Track which zones we've processed to prevent duplicates
 
     data.zones.forEach(z => {
+        // Prevent duplicate processing
+        if (zonesProcessed.has(z.id)) {
+            console.warn(`⚠️ Duplicate zone ${z.id} detected! Skipping.`);
+            return;
+        }
+        zonesProcessed.add(z.id);
+        
         // Calculate center of zone
         const centerLat = (z.bbox.min_lat + z.bbox.max_lat) / 2;
         const centerLon = (z.bbox.min_lon + z.bbox.max_lon) / 2;
 
         const riskLevel = getRiskLevel(z.veg_height_m, z.clearance_m);
         
-        // Create custom icon based on risk level
+        // SKIP adding regular zone marker if this zone has an alert OR is high risk
+        // Alert zones and high-risk zones will get a special alert marker instead (added later)
+        // High-risk zones (red) should also get alert pins for visibility
+        if (z.alert || riskLevel === 'high') {
+            // Just update statistics, don't add marker (will be added as alert marker)
+            totalHeight += z.veg_height_m;
+            if (z.alert) {
+                alertCount++;
+                console.log(`  ✅ Zone ${z.id} has alert: veg=${z.veg_height_m}m, clearance=${z.clearance_m}m`);
+            } else {
+                console.log(`  ⚠️ Zone ${z.id} is high risk (no alert): veg=${z.veg_height_m}m, clearance=${z.clearance_m}m`);
+            }
+            riskCounts[riskLevel]++;
+            return; // Skip adding regular zone marker
+        }
+        
+        // Create custom icon based on risk level (only for non-alert zones)
         let iconHtml, iconClass;
         
         // Better-looking markers with correct positioning
@@ -259,6 +360,7 @@ async function updateMapByDate(dateStr) {
                     ${z.growth_rate_cm_day ? `<i class="fas fa-chart-line"></i> Growth: <strong>${z.growth_rate_cm_day} cm/day</strong><br>` : ''}
                     ${z.days_until_breach ? `<i class="fas fa-calendar-alt"></i> Breach: <strong>${z.days_until_breach} days</strong> (${z.breach_date})<br>` : ''}
                     ${z.ground_elevation_m ? `<i class="fas fa-mountain"></i> Elevation: ${z.ground_elevation_m}m<br>` : ''}
+                    ${z.utility_operator ? `<small style="color: #64748b;"><i class="fas fa-bolt"></i> Operator: <strong>${z.utility_operator}</strong></small><br>` : ''}
                     <small style="color: #64748b;"><i class="fas fa-map-pin"></i> ${centerLat.toFixed(4)}, ${centerLon.toFixed(4)}</small><br>
                     <small style="color: #94a3b8; font-style: italic;">${z.data_source || 'Simulated Data'}</small>
                 </div>
@@ -266,16 +368,18 @@ async function updateMapByDate(dateStr) {
         `, { sticky: true });
 
         zoneLayers[z.id] = marker;
+        console.log(`  📍 Added zone marker for Zone ${z.id} (${riskLevel} risk)`);
         
         // Update statistics
         totalHeight += z.veg_height_m;
-        if (z.alert) alertCount++;
         riskCounts[riskLevel]++;
     });
     
     // Update statistics display
     const avgHeight = data.zones.length > 0 ? (totalHeight / data.zones.length).toFixed(2) : 0;
-    document.getElementById('alertCount').innerText = data.alerts.length;
+    // Count zones with alert=true (not data.alerts.length which may be incomplete)
+    console.log(`📊 Statistics: ${data.zones.length} zones, ${alertCount} alerts, ${Object.keys(zoneLayers).length} zone markers added`);
+    document.getElementById('alertCount').innerText = alertCount;
     document.getElementById('zoneCount').innerText = data.zones.length;
     document.getElementById('avgHeight').innerText = avgHeight + 'm';
     
@@ -289,8 +393,35 @@ async function updateMapByDate(dateStr) {
     
     // Timeline badge removed - using Bootstrap tabs now
 
-    if (data.alerts.length > 0) {
-        data.alerts.forEach(a => {
+    // Build alert list from zones with alert=true OR high risk level
+    // High-risk zones (red) should also get alert pins for visibility, even if clearance > 6.0m
+    const zonesWithAlerts = data.zones.filter(z => {
+        const riskLevel = getRiskLevel(z.veg_height_m, z.clearance_m);
+        return z.alert || riskLevel === 'high';
+    });
+    console.log('📊 Alert count - calculated during loop:', alertCount, 'zonesWithAlerts (alerts + high risk):', zonesWithAlerts.length, 'data.alerts array:', data.alerts.length, 'date:', dateStr);
+    
+    // Update the display with the count of zones that have alert pins (alerts + high risk)
+    // This ensures the count matches the number of alert markers on the map
+    const finalAlertCount = zonesWithAlerts.length;
+    console.log(`✅ Setting alert count to ${finalAlertCount} (matches ${zonesWithAlerts.length} alert markers on map)`);
+    document.getElementById('alertCount').innerText = finalAlertCount;
+    
+    if (zonesWithAlerts.length > 0) {
+        console.log(`📍 Adding ${zonesWithAlerts.length} alert markers to map`);
+        const alertZonesProcessed = new Set(); // Prevent duplicate alert markers
+        zonesWithAlerts.forEach(z => {
+            // Prevent duplicate alert markers
+            if (alertZonesProcessed.has(z.id)) {
+                console.warn(`⚠️ Duplicate alert marker for zone ${z.id}! Skipping.`);
+                return;
+            }
+            alertZonesProcessed.add(z.id);
+            
+            // Calculate center of zone
+            const centerLat = (z.bbox.min_lat + z.bbox.max_lat) / 2;
+            const centerLon = (z.bbox.min_lon + z.bbox.max_lon) / 2;
+            
             // Create custom icon for alert markers (consistent with zone markers)
             const alertIcon = L.divIcon({
                 className: 'custom-alert-marker',
@@ -299,28 +430,29 @@ async function updateMapByDate(dateStr) {
                 iconAnchor: [16, 32]
             });
             
-            const marker = L.marker([a.lat, a.lon], { icon: alertIcon }).addTo(map);
+            const marker = L.marker([centerLat, centerLon], { icon: alertIcon }).addTo(map);
             marker.bindTooltip(`
                 <div style="font-family: 'Poppins', sans-serif; padding: 8px; max-width: 300px;">
-                    <strong style="font-size: 1.1em; color: #ef4444;">🚨 Zone ${a.zone_id}</strong><br>
+                    <strong style="font-size: 1.1em; color: #ef4444;">🚨 Zone ${z.id}</strong><br>
                     <div style="margin-top: 4px; padding: 4px 0; border-top: 1px solid #fee2e2;">
                         Risk Level: <span style="color: #ef4444; font-weight: bold;">🔴 High Risk</span><br>
-                        <i class="fas fa-tree"></i> Vegetation: <strong>${a.veg_height_m}m</strong><br>
-                        <i class="fas fa-ruler-vertical"></i> Clearance: <strong>${a.clearance_m}m</strong><br>
-                        ${a.growth_rate_cm_day ? `<i class="fas fa-chart-line"></i> Growth: <strong>${a.growth_rate_cm_day} cm/day</strong><br>` : ''}
-                        ${a.days_until_breach ? `<i class="fas fa-calendar-alt"></i> Breach: <strong>${a.days_until_breach} days</strong><br>` : ''}
-                        <small style="color: #64748b;"><i class="fas fa-map-pin"></i> ${a.lat.toFixed(4)}, ${a.lon.toFixed(4)}</small>
+                        <i class="fas fa-tree"></i> Vegetation: <strong>${z.veg_height_m}m</strong><br>
+                        <i class="fas fa-ruler-vertical"></i> Clearance: <strong>${z.clearance_m}m</strong><br>
+                        ${z.growth_rate_cm_day ? `<i class="fas fa-chart-line"></i> Growth: <strong>${z.growth_rate_cm_day} cm/day</strong><br>` : ''}
+                        ${z.days_until_breach ? `<i class="fas fa-calendar-alt"></i> Breach: <strong>${z.days_until_breach} days</strong><br>` : ''}
+                        <small style="color: #64748b;"><i class="fas fa-map-pin"></i> ${centerLat.toFixed(4)}, ${centerLon.toFixed(4)}</small>
                     </div>
                 </div>
             `, { sticky: true });
             alertMarkers.push(marker);
+            console.log(`  📍 Added alert marker for Zone ${z.id}`);
 
             const item = document.createElement('div');
             item.className = 'alert-item';
             item.innerHTML = `
-                <strong><i class="fas fa-map-marker-alt"></i> Lat: ${a.lat.toFixed(4)}, Long: ${a.lon.toFixed(4)}</strong><br>
-                <i class="fas fa-tree"></i> Vegetation: ${a.veg_height_m}m<br>
-                <i class="fas fa-ruler-vertical"></i> Clearance: ${a.clearance_m}m
+                <strong><i class="fas fa-map-marker-alt"></i> Zone ${z.id}</strong><br>
+                <i class="fas fa-tree"></i> Vegetation: ${z.veg_height_m}m<br>
+                <i class="fas fa-ruler-vertical"></i> Clearance: ${z.clearance_m}m
             `;
             alertItems.appendChild(item);
             
@@ -329,8 +461,8 @@ async function updateMapByDate(dateStr) {
             alertItemsPredictor.appendChild(itemPredictor);
 
             if ("Notification" in window && Notification.permission === "granted") {
-                new Notification(`🔥 ALERT! Zone ${a.zone_id}`, {
-                    body: `Vegetation Height: ${a.veg_height_m}m | Clearance: ${a.clearance_m}m`,
+                new Notification(`🔥 ALERT! Zone ${z.id}`, {
+                    body: `Vegetation Height: ${z.veg_height_m}m | Clearance: ${z.clearance_m}m`,
                     icon: 'https://em-content.zobj.net/thumbs/120/apple/325/fire_1f525.png'
                 });
             }
@@ -340,20 +472,46 @@ async function updateMapByDate(dateStr) {
         alertItems.innerHTML = noAlertsHtml;
         alertItemsPredictor.innerHTML = noAlertsHtml;
     }
+    
+    // Final marker count verification
+    const totalMarkers = Object.keys(zoneLayers).length + alertMarkers.length;
+    console.log(`✅ Map update complete: ${Object.keys(zoneLayers).length} zone markers + ${alertMarkers.length} alert markers = ${totalMarkers} total (should match ${data.zones.length} zones)`);
+    if (totalMarkers !== data.zones.length) {
+        console.warn(`⚠️ Marker count mismatch! Expected ${data.zones.length} markers, got ${totalMarkers}`);
+    }
+    
+    // Restore button states after update (preserve play/pause state)
+    if (wasPlaying !== undefined) {
+        updateButtonStates(wasPlaying);
+    }
     } catch (error) {
         console.error('❌ Error in updateMapByDate:', error);
         alert('Error loading map data: ' + error.message);
+        // Restore button states even on error
+        if (wasPlaying !== undefined) {
+            updateButtonStates(wasPlaying);
+        }
     }
 }
 
 function playSimulation() {
-    if (isPlaying) return;
+    if (isPlaying) {
+        console.log('⚠️ Already playing, ignoring play request');
+        return;
+    }
     
     // Ensure we have a valid currentDate
     if (!currentDate || dateList.indexOf(currentDate) === -1) {
-        currentDate = dateList[0];
+        const slider = document.getElementById('dayRange');
+        if (slider) {
+            const index = parseInt(slider.value) || 0;
+            currentDate = dateList[index] || dateList[0];
+        } else {
+            currentDate = dateList[0];
+        }
     }
     
+    console.log('▶️ Starting simulation from date:', currentDate);
     isPlaying = true;
     
     // Clear any existing interval
@@ -362,7 +520,24 @@ function playSimulation() {
         intervalId = null;
     }
     
-    intervalId = setInterval(() => {
+    // Store interval ID in a way we can access it
+    const currentIntervalId = setInterval(() => {
+        // CRITICAL: Check if paused FIRST thing
+        if (!isPlaying) {
+            console.log('⏸️ Simulation paused in interval, clearing:', currentIntervalId);
+            clearInterval(currentIntervalId);
+            intervalId = null;
+            updateButtonStates(false);
+            return;
+        }
+        
+        // Verify interval ID matches
+        if (intervalId !== currentIntervalId) {
+            console.log('⚠️ Interval ID mismatch, stopping');
+            clearInterval(currentIntervalId);
+            return;
+        }
+        
         // Get current index
         let index = dateList.indexOf(currentDate);
         
@@ -378,25 +553,93 @@ function playSimulation() {
         
         // Check if we've reached the end
         if (index >= dateList.length - 1) {
-            pauseSimulation();
+            console.log('🏁 Reached end of simulation');
+            isPlaying = false;
+            clearInterval(currentIntervalId);
+            intervalId = null;
+            updateButtonStates(false);
             return;
         }
         
         // Move to next date
         const nextIndex = index + 1;
         currentDate = dateList[nextIndex];
+        console.log('📅 Moving to date:', currentDate, `(${nextIndex + 1}/${dateList.length})`);
         
         // Update map with new date
         updateMapByDate(currentDate);
     }, 800);
+    
+    // Store the interval ID
+    intervalId = currentIntervalId;
+    
+    // Update button states
+    updateButtonStates(true); // true = playing
+}
+
+// Helper function to update button states
+function updateButtonStates(playing) {
+    const playBtn = document.getElementById('playBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    
+    if (playing) {
+        // Show pause, hide play
+        if (playBtn) {
+            playBtn.style.display = 'none';
+            playBtn.style.visibility = 'hidden';
+        }
+        if (pauseBtn) {
+            pauseBtn.style.display = 'inline-block';
+            pauseBtn.style.visibility = 'visible';
+        }
+    } else {
+        // Show play, hide pause
+        if (playBtn) {
+            playBtn.style.display = 'inline-block';
+            playBtn.style.visibility = 'visible';
+        }
+        if (pauseBtn) {
+            pauseBtn.style.display = 'none';
+            pauseBtn.style.visibility = 'hidden';
+        }
+    }
 }
 
 function pauseSimulation() {
+    console.log('⏸️ Pausing simulation, isPlaying was:', isPlaying, 'intervalId:', intervalId);
+    
+    // CRITICAL: Set flag FIRST before clearing interval
     isPlaying = false;
-    if (intervalId) {
-        clearInterval(intervalId);
+    
+    // Force clear interval - use multiple methods to ensure it's cleared
+    if (intervalId !== null && intervalId !== undefined) {
+        try {
+            clearInterval(intervalId);
+            console.log('✅ Interval cleared:', intervalId);
+        } catch (e) {
+            console.error('❌ Error clearing interval:', e);
+        }
         intervalId = null;
     }
+    
+    // Double-check: clear any remaining intervals
+    // This is a safety measure - shouldn't be needed but helps debug
+    let cleared = 0;
+    for (let i = 1; i < 10000; i++) {
+        try {
+            clearInterval(i);
+            cleared++;
+        } catch (e) {
+            // Ignore errors
+        }
+    }
+    if (cleared > 0) {
+        console.log('⚠️ Cleared', cleared, 'additional intervals');
+    }
+    
+    // Update button states
+    updateButtonStates(false); // false = paused
+    console.log('✅ Pause complete - buttons updated, isPlaying:', isPlaying);
 }
 
 // Wait for DOM to be fully loaded before setting up event listeners
@@ -437,23 +680,62 @@ function pauseSimulation() {
             const slider = document.getElementById('dayRange');
             if (slider && dateList.length > 0) {
                 slider.max = dateList.length - 1;
-                slider.removeEventListener('input', slider._handler);
+                
+                // Remove old handler if it exists
+                if (slider._handler) {
+                    slider.removeEventListener('input', slider._handler);
+                    slider.removeEventListener('change', slider._handler);
+                }
+                
+                // Create new handler with better logging
                 slider._handler = function(e) {
-                    if (isUpdatingSlider) return;
+                    if (isUpdatingSlider) {
+                        console.log('⏸️ Slider update skipped (isUpdatingSlider flag)');
+                        return;
+                    }
+                    
                     const index = parseInt(e.target.value);
+                    console.log('📅 Slider moved to index:', index, 'of', dateList.length, 'isPlaying:', isPlaying);
+                    
+                    // Pause simulation if playing
+                    if (isPlaying) {
+                        console.log('⏸️ Pausing simulation due to slider movement');
+                        isPlaying = false;
+                        if (intervalId) {
+                            clearInterval(intervalId);
+                            intervalId = null;
+                        }
+                        updateButtonStates(false);
+                    }
+                    
                     if (index >= 0 && index < dateList.length) {
-                        pauseSimulation();
                         currentDate = dateList[index];
+                        console.log('📅 Updating map to date:', currentDate);
+                        // Don't preserve playing state - we're manually moving slider
                         updateMapByDate(currentDate);
+                    } else {
+                        console.warn('⚠️ Invalid slider index:', index);
                     }
                 };
+                // Add both input and change listeners for better compatibility
                 slider.addEventListener('input', slider._handler);
-                console.log('✅ Slider initialized');
+                slider.addEventListener('change', slider._handler);
+                console.log('✅ Slider initialized with max:', slider.max);
             } else {
+                console.log('⏳ Slider not ready, retrying...');
                 setTimeout(setupSlider, 100);
             }
         }
         setupSlider();
+        
+        // Also setup slider when Time Predictor tab is shown (Bootstrap tab event)
+        const tab2Btn = document.getElementById('tab2-btn');
+        if (tab2Btn) {
+            tab2Btn.addEventListener('shown.bs.tab', function() {
+                console.log('📑 Time Predictor tab shown, re-initializing slider');
+                setTimeout(setupSlider, 50);
+            });
+        }
         
         console.log('✅ App initialized successfully!');
     } catch (error) {
@@ -465,11 +747,16 @@ function pauseSimulation() {
 // Use event delegation for buttons (works even if buttons aren't in DOM yet)
 // This MUST be outside the async function so it runs immediately
 document.addEventListener('click', function(e) {
+    // Check if click is on play button or its icon
+    const playBtn = e.target.closest('#playBtn');
+    const pauseBtn = e.target.closest('#pauseBtn');
+    const resetBtn = e.target.closest('#resetBtn');
+    
     // Play button
-    if (e.target.closest('#playBtn') || e.target.id === 'playBtn') {
+    if (playBtn) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('▶️ Play clicked');
+        console.log('▶️ Play button clicked, isPlaying:', isPlaying);
         if (!isPlaying) {
             playSimulation();
         }
@@ -477,19 +764,21 @@ document.addEventListener('click', function(e) {
     }
     
     // Pause button  
-    if (e.target.closest('#pauseBtn') || e.target.id === 'pauseBtn') {
+    if (pauseBtn) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('⏸️ Pause clicked');
+        console.log('⏸️ Pause button clicked, isPlaying:', isPlaying, 'intervalId:', intervalId);
+        // Force pause regardless of state
+        isPlaying = false;
         pauseSimulation();
         return false;
     }
     
     // Reset button
-    if (e.target.closest('#resetBtn') || e.target.id === 'resetBtn') {
+    if (resetBtn) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('⏮️ Reset clicked');
+        console.log('⏮️ Reset button clicked');
         pauseSimulation();
         if (dateList.length > 0) {
             currentDate = dateList[0];
@@ -507,70 +796,144 @@ const CA_BOUNDS = {
     maxLon: -114.0
 };
 
-// City coordinates (lat, lon)
-const cityCenters = {
-    adelanto: [34.58277, -117.40922],
-agouraHills: [34.13639, -118.77453],
-alameda: [37.76521, -122.24164],
-alhambra: [34.09528, -118.12701],
-alisoViejo: [33.56768, -117.72500],
-alpine: [32.83532, -116.76675],
-altadena: [34.19653, -118.13120],
-alturas: [41.48753, -120.54595],
-amador: [38.44520, -120.78360],
-americanCanyon: [38.18560, -122.26955],
-anaheim: [33.8366, -117.9143],
-anaheimHills: [33.84119, -117.75865],
-anderson: [40.10578, -122.23100],
-angelsCamp: [38.06777, -120.53862],
-angelusOaks: [34.26750, -116.71500],
-antioch: [38.00492, -121.80579],
-appleValley: [34.50083, -117.18588],
-aptos: [36.97757, -121.90268],
-arcadia: [34.13973, -118.03534],
-arcata: [40.86697, -124.08251],
-arnold: [38.42513, -120.26393],
-arroyoGrande: [35.11847, -120.59475],
-artesia: [33.84457, -118.08146],
-atascadero: [35.48947, -120.67029],
-auburn: [38.89660, -121.07688],
-avalon: [33.34281, -118.32779],
-avilaBeach: [35.14100, -120.62667],
-azusa: [34.13066, -117.90687],
-bakersfield: [35.3733, -119.0187],
-boulderCreek: [37.1269, -122.1211],
-bigbar: [40.6552, -122.4194],  // Big Bar Mountain, Trinity County
-chulaVista: [32.6401, -117.0842],
-fresno: [36.7378, -119.7871],
-irvine: [33.6846, -117.8265],
-longBeach: [33.7701, -118.1937],
-losAngeles: [34.0522, -118.2437],
-oakland: [37.8044, -122.2712],
-panocheValley: [36.8500, -120.9000],
-riverside: [33.9806, -117.3755],
-sacramento: [38.5816, -121.4944],
-sanDiego: [32.7157, -117.1611],
-sanFrancisco: [37.7749, -122.4194],
-sanJose: [37.3382, -121.8863],
-santaAna: [33.7455, -117.8677],
-stockton: [37.9577, -121.2908]
-};
-
 // Store transmission tower markers
 let transmissionTowerMarkers = [];
+
+// City search using OpenStreetMap Nominatim API (free, no API key needed)
+let searchTimeout = null;
+let selectedCity = null;
+let currentLocation = null; // Store current location for Predictor tab (lat, lon, radius)
+
+// Search for cities using Nominatim API
+async function searchCities(query) {
+    if (!query || query.length < 2) {
+        document.getElementById('citySuggestions').style.display = 'none';
+        return;
+    }
+
+    const suggestionsDiv = document.getElementById('citySuggestions');
+    
+    // Show loading indicator
+    suggestionsDiv.innerHTML = '<div class="list-group-item"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+    suggestionsDiv.style.display = 'block';
+
+    try {
+        // Use Flask proxy endpoint to avoid CORS issues
+        const url = `/api/search_cities?q=${encodeURIComponent(query)}`;
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        
+        // Use cities from API response
+        const cities = result.cities || [];
+        displayCitySuggestions(cities);
+    } catch (error) {
+        console.error('Error searching cities:', error);
+        suggestionsDiv.innerHTML = 
+            '<div class="list-group-item text-danger"><i class="fas fa-exclamation-triangle"></i> Error searching cities. Please try again or use coordinates.</div>';
+        suggestionsDiv.style.display = 'block';
+    }
+}
+
+// Display city suggestions
+function displayCitySuggestions(cities) {
+    const suggestionsDiv = document.getElementById('citySuggestions');
+    
+    if (!cities || cities.length === 0) {
+        suggestionsDiv.innerHTML = '<div class="list-group-item">No cities found</div>';
+        suggestionsDiv.style.display = 'block';
+        return;
+    }
+    
+    suggestionsDiv.innerHTML = cities.map(city => {
+        const displayName = city.display_name.split(',')[0]; // City name
+        const state = city.address?.state || 'California';
+        return `
+            <a href="#" class="list-group-item list-group-item-action city-suggestion" 
+               data-lat="${city.lat}" 
+               data-lon="${city.lon}"
+               data-name="${displayName}">
+                <strong>${displayName}</strong>
+                <small class="text-muted d-block">${state}</small>
+            </a>
+        `;
+    }).join('');
+    
+    suggestionsDiv.style.display = 'block';
+    
+    // Add click handlers
+    document.querySelectorAll('.city-suggestion').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const lat = parseFloat(item.dataset.lat);
+            const lon = parseFloat(item.dataset.lon);
+            const name = item.dataset.name;
+            
+            selectedCity = { lat, lon, name };
+            document.getElementById('citySearch').value = name;
+            document.getElementById('selectedCityLat').value = lat;
+            document.getElementById('selectedCityLon').value = lon;
+            suggestionsDiv.style.display = 'none';
+        });
+    });
+}
+
+// Initialize city search
+document.addEventListener('DOMContentLoaded', () => {
+    const citySearch = document.getElementById('citySearch');
+    const suggestionsDiv = document.getElementById('citySuggestions');
+    
+    if (citySearch) {
+        // Search as user types (with debounce)
+        citySearch.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+            
+            if (query.length >= 2) {
+                searchTimeout = setTimeout(() => searchCities(query), 300); // Wait 300ms after typing stops
+            } else {
+                suggestionsDiv.style.display = 'none';
+                selectedCity = null;
+            }
+        });
+        
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!citySearch.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
+        
+        // Clear selection when input is cleared
+        citySearch.addEventListener('focus', () => {
+            if (citySearch.value.length >= 2) {
+                searchCities(citySearch.value);
+            }
+        });
+    }
+});
 
 document.getElementById('goBtn').addEventListener('click', async () => {
     let lat = parseFloat(document.getElementById('latInput').value);
     let lon = parseFloat(document.getElementById('lonInput').value);
-    let cityVal = document.getElementById('citySelect').value;
+    const selectedLat = parseFloat(document.getElementById('selectedCityLat').value);
+    const selectedLon = parseFloat(document.getElementById('selectedCityLon').value);
 
     let targetLat, targetLon;
 
-    if (cityVal !== "") {
-        // Focus on selected city
-        const coords = cityCenters[cityVal];
-        targetLat = coords[0];
-        targetLon = coords[1];
+    // Check if city is selected from search
+    if (!isNaN(selectedLat) && !isNaN(selectedLon)) {
+        targetLat = selectedLat;
+        targetLon = selectedLon;
     } else if (!isNaN(lat) && !isNaN(lon)) {
         // Focus on input coordinates
         if (lat < CA_BOUNDS.minLat || lat > CA_BOUNDS.maxLat || lon < CA_BOUNDS.minLon || lon > CA_BOUNDS.maxLon) {
@@ -584,6 +947,58 @@ document.getElementById('goBtn').addEventListener('click', async () => {
         return;
     }
 
+    // RESET METRICS FIRST to prevent showing stale data
+    console.log('🔄 Resetting metrics before new scan...');
+    document.getElementById('alertCount').innerText = '0';
+    document.getElementById('zoneCount').innerText = '0';
+    document.getElementById('avgHeight').innerText = '0.0m';
+    document.getElementById('lowCount').innerText = '0';
+    document.getElementById('moderateCount').innerText = '0';
+    document.getElementById('highCount').innerText = '0';
+    document.getElementById('mlRiskLevel').innerText = '-';
+    document.getElementById('mlRiskScore').innerText = '-';
+    document.getElementById('mlConfidence').innerText = '-';
+    document.getElementById('growthRateDisplay').innerText = '-';
+    document.getElementById('breachPrediction').innerText = '-';
+
+    // Clear old transmission tower markers BEFORE fetching new data
+    console.log(`🗑️ Clearing ${transmissionTowerMarkers.length} old tower markers...`);
+    transmissionTowerMarkers.forEach(marker => {
+        try {
+            map.removeLayer(marker);
+        } catch (e) {
+            console.warn('⚠️ Error removing tower marker:', e);
+        }
+    });
+    transmissionTowerMarkers = [];
+    
+    // Clear old zones when searching a city (to avoid confusion)
+    Object.values(zoneLayers).forEach(layer => {
+        try {
+            map.removeLayer(layer);
+        } catch (e) {
+            console.warn('⚠️ Error removing zone layer:', e);
+        }
+    });
+    zoneLayers = {};
+    alertMarkers.forEach(m => {
+        try {
+            map.removeLayer(m);
+        } catch (e) {
+            console.warn('⚠️ Error removing alert marker:', e);
+        }
+    });
+    alertMarkers = [];
+
+    // Store current location for Predictor tab
+    // Use a larger radius for zones (25km) since zones cover larger areas than individual towers
+    currentLocation = {
+        lat: targetLat,
+        lon: targetLon,
+        radius: 25 // km - larger radius for zones (towers use 15km)
+    };
+    console.log(`📍 Storing location for Predictor: ${targetLat}, ${targetLon}, radius ${currentLocation.radius}km`);
+    
     // Smooth zoom/fly to the location
     map.flyTo([targetLat, targetLon], 11, { animate: true, duration: 2.0 });
     
@@ -593,12 +1008,22 @@ document.getElementById('goBtn').addEventListener('click', async () => {
     
     // Fetch transmission tower data with risk metrics
     try {
+        console.log(`🔍 Fetching towers for location: ${targetLat}, ${targetLon}`);
         const response = await fetch(`/api/transmission_lines?lat=${targetLat}&lon=${targetLon}&radius=15`);
-        const data = await response.json();
         
-        // Clear old transmission tower markers
-        transmissionTowerMarkers.forEach(marker => map.removeLayer(marker));
-        transmissionTowerMarkers = [];
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Tower data received:', data.towers_found, 'towers');
+        
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        // Markers and zones already cleared above, now draw new towers
+        console.log(`✅ Drawing ${data.towers_found} new tower markers...`);
         
         // Draw transmission towers on map with risk metrics
         if (data.towers && data.towers.length > 0) {
@@ -715,22 +1140,55 @@ document.getElementById('goBtn').addEventListener('click', async () => {
                 
                 // Call ML prediction for this tower
                 try {
+                    console.log('🤖 Fetching ML prediction for tower:', worstTower.tower_id);
                     const mlRes = await fetch(`/api/ml_predict?veg_height=${worstTower.veg_height_m}&clearance=${worstTower.clearance_m}&temperature=25&humidity=50&wind_speed=5&days_since_rain=7&latitude=${worstTower.latitude}&longitude=${worstTower.longitude}`);
-                    const mlData = await mlRes.json();
                     
-                    document.getElementById('mlRiskLevel').innerText = mlData.risk_level || worstTower.risk_level;
-                    document.getElementById('mlRiskScore').innerText = (mlData.risk_score ? (mlData.risk_score * 100).toFixed(1) + '%' : '-');
-                    document.getElementById('mlConfidence').innerText = (mlData.confidence ? (mlData.confidence * 100).toFixed(0) + '%' : '-');
+                    if (!mlRes.ok) {
+                        throw new Error(`ML API error: ${mlRes.status}`);
+                    }
+                    
+                    const mlData = await mlRes.json();
+                    console.log('✅ ML prediction received:', mlData);
+                    
+                    if (mlData.success && mlData.prediction) {
+                        const pred = mlData.prediction;
+                        const riskEmoji = {
+                            'Low': '🟢',
+                            'Moderate': '🟡',
+                            'High': '🟠',
+                            'Critical': '🔴'
+                        };
+                        document.getElementById('mlRiskLevel').innerText = `${riskEmoji[pred.risk_level] || ''} ${pred.risk_level}`;
+                        document.getElementById('mlRiskScore').innerText = `${pred.risk_percentage.toFixed(1)}%`;
+                        document.getElementById('mlConfidence').innerText = `${(pred.confidence * 100).toFixed(0)}%`;
+                    } else {
+                        console.warn('⚠️ ML prediction failed:', mlData);
+                        document.getElementById('mlRiskLevel').innerText = '-';
+                        document.getElementById('mlRiskScore').innerText = '-';
+                        document.getElementById('mlConfidence').innerText = '-';
+                    }
                 } catch (mlError) {
-                    console.error('Error fetching ML prediction for tower:', mlError);
+                    console.error('❌ Error fetching ML prediction for tower:', mlError);
+                    document.getElementById('mlRiskLevel').innerText = '-';
+                    document.getElementById('mlRiskScore').innerText = '-';
+                    document.getElementById('mlConfidence').innerText = '-';
                 }
             }
         } else {
+            console.warn('⚠️ No towers returned from API');
             alertItemsElement.innerHTML = '<div style="text-align: center; color: #64748b; padding: 10px;"><i class="fas fa-info-circle"></i><br>No transmission towers found in this area</div>';
+            // Reset metrics to zero
+            document.getElementById('alertCount').innerText = '0';
+            document.getElementById('zoneCount').innerText = '0';
+            document.getElementById('avgHeight').innerText = '0.0m';
         }
     } catch (error) {
-        console.error('Error fetching transmission towers:', error);
-        alertItemsElement.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 10px;"><i class="fas fa-exclamation-triangle"></i><br>Error loading transmission infrastructure</div>';
+        console.error('❌ Error fetching transmission towers:', error);
+        alertItemsElement.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 10px;"><i class="fas fa-exclamation-triangle"></i><br>Error loading transmission infrastructure<br><small>${error.message}</small></div>`;
+        // Reset metrics on error
+        document.getElementById('alertCount').innerText = '0';
+        document.getElementById('zoneCount').innerText = '0';
+        document.getElementById('avgHeight').innerText = '0.0m';
     }
 });
 
@@ -788,7 +1246,7 @@ document.getElementById('notifyAuthorityBtn').addEventListener('click', async ()
 // ========== INITIALIZE: Load zones on page load ==========
 // This is handled by the init() function above, so we don't need duplicate initialization
 
-// ========== TAB SWITCHING: Reset to default zones when switching to Time Predictor ==========
+// ========== TAB SWITCHING: Load zones when switching to Time Predictor ==========
 const tab2Btn = document.getElementById('tab2-btn');
 if (tab2Btn) {
     tab2Btn.addEventListener('click', async () => {
@@ -796,9 +1254,16 @@ if (tab2Btn) {
         transmissionTowerMarkers.forEach(marker => map.removeLayer(marker));
         transmissionTowerMarkers = [];
         
-        // Reload default zones
+        // Load zones (will be filtered by currentLocation if a city was selected)
         if (dateList.length > 0) {
             currentDate = dateList[0];
+            if (currentLocation) {
+                console.log(`📍 Loading Predictor for location: ${currentLocation.lat}, ${currentLocation.lon}, radius ${currentLocation.radius}km`);
+                // Zoom to the selected location
+                map.flyTo([currentLocation.lat, currentLocation.lon], 11, { animate: true, duration: 1.0 });
+            } else {
+                console.log('📍 Loading Predictor with default zones (no city selected)');
+            }
             await updateMapByDate(currentDate);
         }
         
@@ -810,6 +1275,6 @@ if (tab2Btn) {
         
         // Controls are already set up via event delegation, no need to re-setup
         
-        console.log('✅ Reset to default zones');
+        console.log('✅ Predictor tab loaded');
     });
 }

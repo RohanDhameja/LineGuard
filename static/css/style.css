@@ -977,6 +977,41 @@ input[type=range]::-moz-range-thumb {
     box-shadow: 0 0 10px rgba(220, 20, 60, 0.6);
 }
 
+/* ========== CITY SEARCH SUGGESTIONS ========== */
+#citySuggestions {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    margin-top: -12px;
+}
+
+.city-suggestion {
+    padding: 10px 15px !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.city-suggestion:hover {
+    background-color: rgba(99, 102, 241, 0.1) !important;
+    transform: translateX(2px);
+}
+
+.city-suggestion:last-child {
+    border-bottom: none !important;
+}
+
+.city-suggestion strong {
+    color: #1e293b;
+    font-size: 0.95rem;
+}
+
+.city-suggestion small {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
 @keyframes pulse-ring {
     0% {
         transform: translate(-50%, -50%) scale(0.8);

@@ -13,7 +13,12 @@ import joblib
 import json
 from datetime import datetime
 import os
-import shap
+try:
+    import shap
+    SHAP_AVAILABLE = True
+except ImportError:
+    SHAP_AVAILABLE = False
+    shap = None
 
 
 class FireRiskModel:
@@ -437,10 +442,14 @@ class FireRiskModel:
         test_accuracy = sum([1 for p, t in zip(test_pred_labels, test_true_labels) if p == t]) / len(y_test)
         print(f"   Risk Level Accuracy: {test_accuracy:.4f}")
         
-        # Initialize SHAP explainer
-        print("\n🔍 Initializing SHAP Explainer...")
-        self._initialize_shap_explainer(X_train_scaled)
-        print("✅ SHAP explainer ready")
+        # Initialize SHAP explainer (if available)
+        if SHAP_AVAILABLE:
+            print("\n🔍 Initializing SHAP Explainer...")
+            self._initialize_shap_explainer(X_train_scaled)
+            print("✅ SHAP explainer ready")
+        else:
+            print("\n⚠️  SHAP not available - skipping explainer initialization")
+            print("   (ML predictions will work, but explanations disabled)")
         
         print("\n" + "="*60)
         print("✅ TRAINING COMPLETE")
@@ -470,6 +479,10 @@ class FireRiskModel:
         Args:
             X_train: Scaled training data
         """
+        if not SHAP_AVAILABLE:
+            print("⚠️  SHAP not available - explainer not initialized")
+            return
+            
         # Use a sample of training data as background (100 samples for speed)
         n_background = min(100, len(X_train))
         self.background_data = X_train[:n_background]
@@ -490,9 +503,9 @@ class FireRiskModel:
             data: dict with input features
             
         Returns:
-            dict: SHAP explanation
+            dict: SHAP explanation or None if SHAP unavailable
         """
-        if self.explainer is None:
+        if not SHAP_AVAILABLE or self.explainer is None:
             return None
         
         # Create and scale features
@@ -632,10 +645,12 @@ class FireRiskModel:
         self.best_regressor = joblib.load(model_files['regressor'])
         self.scaler = joblib.load(model_files['scaler'])
         
-        # Load background data and reinitialize SHAP explainer
-        if os.path.exists(model_files['background_data']):
+        # Load background data and reinitialize SHAP explainer (if available)
+        if os.path.exists(model_files['background_data']) and SHAP_AVAILABLE:
             self.background_data = joblib.load(model_files['background_data'])
             self._initialize_shap_explainer(self.background_data)
+        elif os.path.exists(model_files['background_data']) and not SHAP_AVAILABLE:
+            print("⚠️  SHAP not available - model explanations disabled")
         
         with open(model_files['metadata'], 'r') as f:
             metadata = json.load(f)
@@ -646,4 +661,6 @@ class FireRiskModel:
         print(f"✅ Model loaded successfully (timestamp: {timestamp})")
         if self.explainer:
             print(f"✅ SHAP explainer ready for interpretability")
+        elif not SHAP_AVAILABLE:
+            print("⚠️  SHAP not installed - explanations disabled (predictions still work)")
         return True

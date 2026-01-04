@@ -12,12 +12,16 @@ app = Flask(__name__)
 # === Load ML Model ===
 ml_model = None
 try:
-    if os.path.exists('models'):
+    # Get absolute path to models directory
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    models_dir = os.path.join(app_dir, 'models')
+    
+    if os.path.exists(models_dir):
         ml_model = FireRiskModel()
         ml_model.load_models()
         print("✅ ML Risk Model loaded successfully!")
     else:
-        print("⚠️  ML models not found. Run 'python train_model.py' to train the model.")
+        print(f"⚠️  ML models not found at {models_dir}. Run 'python train_model.py' to train the model.")
 except Exception as e:
     print(f"⚠️  Could not load ML model: {e}")
     print("   The app will work without ML predictions.")
@@ -28,6 +32,10 @@ OPENWEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
 
 # === USGS 3DEP LiDAR API Configuration ===
 USGS_ELEVATION_URL = "https://epqs.nationalmap.gov/v1/json"
+
+# === Water Body Detection Configuration (MVP) ===
+# Uses elevation-based detection only (no hardcoded boundaries)
+# For production, consider integrating: USGS NHD API, OpenStreetMap Overpass API, or OnWater.io
 
 # Simple cache for weather and LiDAR data (avoid hitting API limits)
 weather_cache = {}
@@ -218,8 +226,151 @@ def fetch_lines():
 # === Transmission lines ===
 LINES = fetch_lines()
 
-LINE_HEIGHT_M = 8.0
 THRESHOLD_DISTANCE = 6.0  # meters
+
+def estimate_line_height_from_voltage(kv_value):
+    """
+    Estimate transmission line height based on voltage (kV).
+    Higher voltage lines are taller to maintain safe clearances.
+    
+    Typical heights by voltage:
+    - 69kV:   ~8-10 meters (distribution/subtransmission)
+    - 115kV:  ~10-12 meters (subtransmission)
+    - 230kV:  ~12-15 meters (transmission)
+    - 500kV:  ~15-20 meters (high-voltage transmission)
+    
+    Args:
+        kv_value: Voltage in kV (can be string like "115kV" or number like 115)
+    
+    Returns:
+        float: Estimated line height in meters
+    """
+    # Handle string format like "115kV" or "N/A"
+    if isinstance(kv_value, str):
+        if kv_value == "N/A" or not kv_value:
+            return 8.0  # Default for unknown voltage
+        
+        # Extract number from string (e.g., "115kV" -> 115)
+        try:
+            kv = float(''.join(filter(str.isdigit, kv_value)))
+        except (ValueError, TypeError):
+            return 8.0  # Default if can't parse
+    else:
+        # Already a number
+        try:
+            kv = float(kv_value)
+        except (TypeError, ValueError):
+            return 8.0  # Default if invalid
+    
+    # Estimate height based on voltage
+    if kv < 100:
+        return 8.0   # 69kV lines - typical distribution/subtransmission
+    elif kv < 200:
+        return 11.0  # 115kV lines - subtransmission
+    elif kv < 400:
+        return 13.5  # 230kV lines - transmission
+    else:
+        return 17.0  # 500kV+ lines - high-voltage transmission
+
+def find_nearest_line_voltage(lat, lon, lines=None):
+    """
+    Find the nearest transmission line to a location and return its voltage.
+    
+    Args:
+        lat: Latitude
+        lon: Longitude
+        lines: List of line objects (defaults to global LINES)
+    
+    Returns:
+        float or str: Voltage value (kV) or "N/A" if no line found
+    """
+    if lines is None:
+        lines = LINES
+    
+    if not lines:
+        return "N/A"
+    
+    import math
+    
+    min_distance = float('inf')
+    nearest_kv = "N/A"
+    
+    for line in lines:
+        # Check distance to each point in the line
+        for point in line.get("points", []):
+            point_lat = point.get("lat", 0)
+            point_lon = point.get("lon", 0)
+            
+            # Calculate distance (Haversine formula simplified for small distances)
+            dlat = math.radians(lat - point_lat)
+            dlon = math.radians(lon - point_lon)
+            a = math.sin(dlat/2)**2 + math.cos(math.radians(point_lat)) * math.cos(math.radians(lat)) * math.sin(dlon/2)**2
+            distance = 2 * math.asin(math.sqrt(a)) * 6371000  # Earth radius in meters
+            
+            if distance < min_distance:
+                min_distance = distance
+                nearest_kv = line.get("kv", "N/A")
+    
+    # Only return voltage if line is reasonably close (within 5km)
+    if min_distance < 5000:
+        return nearest_kv
+    else:
+        return "N/A"
+
+# Default line height (fallback when voltage not available)
+DEFAULT_LINE_HEIGHT_M = 8.0
+
+def is_over_water(lat, lon):
+    """
+    Check if a location is over water using elevation data only.
+    
+    METHOD: USGS 3DEP elevation data (already cached)
+    - Negative elevation (< 0m) = definitely water (sea level or below)
+    - Very low elevation (< 1m) = likely water (coastal areas, marshes, shallow water)
+    - This method can detect ANY water body, not just specific regions
+    
+    If elevation data is unavailable or inconclusive, assumes land
+    (safer - false negatives are better than false positives for tower placement)
+    
+    NOTE: For production, consider integrating:
+    - USGS National Hydrography Dataset (NHD) API
+    - OpenStreetMap Overpass API (query for natural=water)
+    - OnWater.io API (simple water/land check)
+    
+    Args:
+        lat: Latitude
+        lon: Longitude
+    
+    Returns:
+        bool: True if location appears to be over water
+    """
+    try:
+        # Use elevation data to detect water
+        elevation_data = fetch_elevation_lidar(lat, lon)
+        ground_elevation = elevation_data.get('ground_elevation_m', 100.0)
+        
+        # Ensure it's a number
+        try:
+            ground_elevation = float(ground_elevation)
+        except (TypeError, ValueError):
+            # If elevation parsing fails, assume land (safer)
+            return False
+        
+        # Negative elevation = definitely water (sea level or below)
+        if ground_elevation < 0:
+            return True
+        
+        # Very low elevation (< 1m) = likely water (coastal areas, marshes, shallow water)
+        if ground_elevation < 1.0:
+            return True
+        
+        # Otherwise, assume land
+        return False
+        
+    except Exception as e:
+        print(f"⚠️  Error checking water for ({lat}, {lon}): {e}")
+        # If we can't determine, assume land (safer - false negatives are worse than false positives)
+        return False
 
 # === Define vegetation zones in visible Central California area ===
 ZONES = [
@@ -295,9 +446,10 @@ def metadata():
     return jsonify({
         "lines": LINES,
         "zones": ZONES,
-        "line_height_m": LINE_HEIGHT_M,
+        "default_line_height_m": DEFAULT_LINE_HEIGHT_M,
         "threshold_distance_m": THRESHOLD_DISTANCE,
-        "dates": DATE_LIST
+        "dates": DATE_LIST,
+        "note": "Line heights are estimated from voltage (kV) data"
     })
 
 @app.route('/api/state')
@@ -338,8 +490,31 @@ def state():
 
     for zone in ZONES:
         zid = zone["id"]
+        
+        # Calculate zone center
+        center_lat = (zone["min_lat"] + zone["max_lat"]) / 2
+        center_lon = (zone["min_lon"] + zone["max_lon"]) / 2
+        
+        # Skip zones over water bodies - use cached elevation data for consistency
+        # Check water status using cached elevation data (not fresh API call)
+        elevation_data = elevation_data_cache.get(zid, get_default_elevation())
+        ground_elevation = elevation_data.get('ground_elevation_m', 100.0)
+        try:
+            ground_elevation = float(ground_elevation)
+        except (TypeError, ValueError):
+            ground_elevation = 100.0  # Assume land if can't parse
+        
+        # Negative or very low elevation = water
+        if ground_elevation < 0 or ground_elevation < 1.0:
+            continue  # Skip this zone - it's over water
+        
         veg_h = veg_time_series[zid][day_i]
-        clearance = LINE_HEIGHT_M - veg_h
+        
+        # Estimate line height based on voltage from nearest transmission line
+        nearest_kv = find_nearest_line_voltage(center_lat, center_lon)
+        line_height = estimate_line_height_from_voltage(nearest_kv)
+        
+        clearance = line_height - veg_h
         alert = clearance <= THRESHOLD_DISTANCE
         
         # Get elevation data from cache (already fetched in parallel)
@@ -353,6 +528,11 @@ def state():
         else:
             days_until_breach = 0
             breach_date = 'BREACHED'
+        
+        # Determine utility operator for this zone based on its center location
+        center_lat = (zone["min_lat"] + zone["max_lat"]) / 2
+        center_lon = (zone["min_lon"] + zone["max_lon"]) / 2
+        utility_operator = get_utility_for_location(center_lat, center_lon)
 
         zones_out.append({
             "id": zid,
@@ -370,7 +550,9 @@ def state():
             "growth_rate_cm_day": round(growth_rate_m_day * 100, 2),  # Convert to cm/day
             "days_until_breach": days_until_breach,
             "breach_date": breach_date,
-            "data_source": elevation_data['data_source']
+            "data_source": elevation_data['data_source'],
+            # NEW: Utility operator information
+            "utility_operator": utility_operator
         })
 
         if alert:
@@ -565,9 +747,91 @@ def ml_batch_predict():
 # Generates transmission tower locations with vegetation monitoring data
 # In production, this would connect to utility company databases
 
+def get_utility_for_location(lat, lon):
+    """
+    Determine the correct utility operator based on geographic location.
+    Maps California coordinates to utility service territories.
+    
+    Service Territories (approximate):
+    - PG&E: Northern and Central California (Bay Area, Central Valley, Sierra Nevada)
+    - SCE: Central and Southern California (primarily south of Fresno/Bakersfield)
+    - SMUD: Sacramento area only
+    - SDG&E: San Diego County and parts of Orange County
+    - LADWP: Los Angeles area
+    """
+    # SMUD - Sacramento Municipal Utility District (Sacramento area only)
+    if 38.4 <= lat <= 38.7 and -121.6 <= lon <= -121.3:
+        return 'SMUD'
+    
+    # SDG&E - San Diego Gas & Electric (San Diego County and parts of Orange County)
+    if 32.5 <= lat <= 33.5 and -117.5 <= lon <= -116.5:
+        return 'SDG&E'
+    
+    # LADWP - Los Angeles Department of Water and Power (Los Angeles area)
+    if 33.7 <= lat <= 34.4 and -118.7 <= lon <= -118.0:
+        return 'LADWP'
+    
+    # SCE - Southern California Edison (primarily Southern California, south of ~35.5 latitude)
+    # SCE territory: Most of Southern California, but NOT Northern California
+    # Only assign SCE for clearly Southern California areas (south of Bakersfield ~35.4)
+    if lat < 35.5:
+        # Additional check: SCE primarily operates in areas east of -121.5 (inland) 
+        # or in the greater LA/Orange County area
+        if lon > -121.5 or (33.5 <= lat <= 35.5 and -118.5 <= lon <= -117.0):
+            return 'Southern California Edison'
+    
+    # PG&E - Pacific Gas & Electric (Northern and Central California - default for most areas)
+    # This covers: Bay Area (including Alameda County), Central Valley, Sierra Nevada, Northern California
+    # PG&E is the primary utility for most of Northern and Central California
+    return 'PG&E'
+
+@app.route('/api/search_cities')
+def search_cities():
+    """
+    Proxy endpoint for city search to avoid CORS issues.
+    Searches California cities using Nominatim API.
+    """
+    query = request.args.get('q', '')
+    if not query or len(query) < 2:
+        return jsonify({'error': 'Query too short'}), 400
+    
+    try:
+        # Search in California, USA
+        url = f"https://nominatim.openstreetmap.org/search?" + \
+            f"q={query}" + \
+            f"&format=json" + \
+            f"&limit=8" + \
+            f"&viewbox=-124.5,42.0,-114.0,32.5" + \
+            f"&bounded=1" + \
+            f"&countrycodes=us" + \
+            f"&addressdetails=1" + \
+            f"&extratags=1"
+        
+        response = requests.get(url, headers={
+            'User-Agent': 'FireGuardAI/1.0'
+        }, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            # Filter to only show cities/towns
+            cities = [item for item in data if 
+                     item.get('type') in ['city', 'town', 'village'] or 
+                     item.get('class') == 'place']
+            return jsonify({'cities': cities if cities else data})
+        else:
+            return jsonify({'error': f'API error: {response.status_code}'}), 500
+            
+    except Exception as e:
+        print(f"Error searching cities: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/transmission_lines')
 def get_transmission_lines():
-    """Generate transmission towers with risk metrics for a given location (Demo Mode)."""
+    """Generate transmission towers with risk metrics for a given location (Demo Mode).
+    
+    Towers are deterministically generated based on location coordinates.
+    Same location = same towers (consistent results for demos).
+    """
     try:
         lat = float(request.args.get('lat', 37.75))
         lon = float(request.args.get('lon', -121.8))
@@ -575,31 +839,62 @@ def get_transmission_lines():
         
         print(f"🌐 Generating transmission tower data for ({lat}, {lon}) radius {radius_km}km...")
         
-        # Generate 8-15 transmission towers in the area
-        num_towers = random.randint(8, 15)
+        # Create a deterministic random number generator seeded by location coordinates
+        # This ensures the same location always generates the same towers
+        import hashlib
+        location_hash = hashlib.md5(f"{lat:.6f}_{lon:.6f}_{radius_km:.1f}".encode()).hexdigest()
+        seed_value = int(location_hash[:8], 16)  # Use first 8 hex chars as seed
+        local_random = random.Random(seed_value)
+        
+        print(f"🔑 Using seed {seed_value} for location ({lat:.6f}, {lon:.6f}) - ensures consistent results")
+        
+        # Generate 8-15 transmission towers in the area (deterministic count)
+        target_towers = local_random.randint(8, 15)
         towers = []
         
-        utilities = ['PG&E', 'Southern California Edison', 'SMUD', 'LADWP', 'SDG&E']
         voltages = ['69kV', '115kV', '230kV', '500kV']
         
         import math
         radius_deg = radius_km / 111.0
         
-        for i in range(num_towers):
-            # Random position within radius
-            angle = random.uniform(0, 360)
-            distance = random.uniform(0.2, 1.0) * radius_deg
+        # Generate towers, retrying if they're over water
+        # If search location is near water, bias generation away from water
+        search_near_water = is_over_water(lat, lon)
+        max_attempts = target_towers * 5  # Try up to 5x the target to account for water filtering
+        attempts = 0
+        
+        while len(towers) < target_towers and attempts < max_attempts:
+            attempts += 1
+            
+            # If near water, bias generation towards land (prefer east/south directions away from Bay)
+            if search_near_water:
+                # Bias angle away from west (where Bay is) - prefer 90-270 degree range (south/east)
+                angle = local_random.uniform(90, 270) if local_random.random() < 0.7 else local_random.uniform(0, 360)
+            else:
+                angle = local_random.uniform(0, 360)
+            
+            distance = local_random.uniform(0.2, 1.0) * radius_deg
             
             tower_lat = lat + distance * math.cos(math.radians(angle))
             tower_lon = lon + distance * math.sin(math.radians(angle))
             
-            # Generate risk metrics for this tower
-            veg_height = round(random.uniform(0.2, 4.5), 2)
-            line_height = 8.0  # Standard transmission line height
+            # Skip towers over water bodies
+            if is_over_water(tower_lat, tower_lon):
+                continue
+            
+            # If we get here, tower is on land - proceed with generation
+            
+            # Generate risk metrics for this tower (deterministic)
+            veg_height = round(local_random.uniform(0.2, 4.5), 2)
+            
+            # Estimate line height based on voltage (deterministic)
+            voltage_str = local_random.choice(voltages)
+            line_height = estimate_line_height_from_voltage(voltage_str)
+            
             clearance = round(line_height - veg_height, 2)
             
-            # Determine alert status
-            alert = clearance < THRESHOLD_DISTANCE
+            # Determine alert status (use <= to match zones logic - clearance <= 6.0m is an alert)
+            alert = clearance <= THRESHOLD_DISTANCE
             
             # Risk level
             if veg_height < 1.0:
@@ -609,17 +904,23 @@ def get_transmission_lines():
             else:
                 risk_level = 'high'
             
-            # Growth rate and breach prediction
-            growth_rate = round(random.uniform(0.5, 1.5), 1)
+            # Growth rate and breach prediction (deterministic)
+            growth_rate = round(local_random.uniform(0.5, 1.5), 1)
             if clearance > THRESHOLD_DISTANCE and growth_rate > 0:
                 days_until_breach = max(0, int((clearance - THRESHOLD_DISTANCE) / (growth_rate / 100)))
             else:
                 days_until_breach = 0 if alert else 999
             
+            # Determine correct utility based on tower location
+            tower_utility = get_utility_for_location(tower_lat, tower_lon)
+            
+            # Use deterministic date for last inspection (based on tower index)
+            inspection_days_ago = local_random.randint(1, 30)
+            
             towers.append({
-                'tower_id': f'T-{i+1:03d}',
-                'owner': random.choice(utilities),
-                'voltage': random.choice(voltages),
+                'tower_id': f'T-{len(towers)+1:03d}',
+                'owner': tower_utility,
+                'voltage': voltage_str,  # Use the same voltage used for height calculation
                 'latitude': round(tower_lat, 6),
                 'longitude': round(tower_lon, 6),
                 'veg_height_m': veg_height,
@@ -629,9 +930,17 @@ def get_transmission_lines():
                 'alert': alert,
                 'growth_rate_cm_day': growth_rate,
                 'days_until_breach': days_until_breach,
-                'last_inspection': (date.today() - timedelta(days=random.randint(1, 30))).isoformat(),
-                'structure_type': random.choice(['Lattice Tower', 'Monopole', 'H-Frame', 'Steel Pole'])
+                'last_inspection': (date.today() - timedelta(days=inspection_days_ago)).isoformat(),
+                'structure_type': local_random.choice(['Lattice Tower', 'Monopole', 'H-Frame', 'Steel Pole'])
             })
+        
+        # SAFETY CHECK: Filter out any towers that are over water (double-check)
+        # This ensures no water towers slip through even if generation logic has issues
+        towers = [t for t in towers if not is_over_water(t['latitude'], t['longitude'])]
+        
+        # Re-number towers after filtering
+        for i, tower in enumerate(towers, 1):
+            tower['tower_id'] = f'T-{i:03d}'
         
         # Count by risk level
         risk_counts = {
@@ -640,7 +949,10 @@ def get_transmission_lines():
             'high': sum(1 for t in towers if t['risk_level'] == 'high')
         }
         
-        alert_count = sum(1 for t in towers if t['alert'])
+        # Count alerts: only towers with high risk (veg > 2.5m)
+        # High risk towers are the critical alerts (red markers)
+        # Note: alert flag (clearance <= 6.0m) is separate from risk_level
+        alert_count = sum(1 for t in towers if t['risk_level'] == 'high')
         
         result = {
             'location': {'lat': lat, 'lon': lon},
@@ -671,4 +983,9 @@ def get_transmission_lines():
         })
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    # Production: Use environment variable for port, disable debug mode
+    # For local development, set FLASK_ENV=development
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    app.run(debug=debug, host='0.0.0.0', port=port)
